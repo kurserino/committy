@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import "dotenv/config";
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import OpenAI from "openai";
 import { program } from "commander";
 import path from "path";
@@ -49,32 +49,74 @@ const DEFAULT_EXCLUDES = [
 ];
 
 function buildPathspec(dir, excludes) {
-  const root = dir && dir.trim() ? dir : ".";
-  const specs = [root, ...excludes.map((p) => `:(exclude)${p}`)];
-  // Quote specs to avoid shell expansion; git will interpret globs
-  return specs.map((s) => `'${s}'`).join(" ");
+  const rawRoot = dir && dir.trim() ? dir : ".";
+  // Ensure pathspec root is relative to current working directory and uses POSIX separators
+  const relativeRoot = path.isAbsolute(rawRoot)
+    ? path.relative(process.cwd(), rawRoot)
+    : rawRoot;
+  const normalizedRoot = relativeRoot && relativeRoot !== "" ? relativeRoot : ".";
+  const gitRoot = normalizedRoot.split(path.sep).join("/");
+  // Return as array to avoid shell quoting issues on Windows/PowerShell
+  return [gitRoot, ...excludes.map((p) => `:(exclude)${p}`)];
+}
+
+function runGitAndCapture(args) {
+  const result = spawnSync("git", args.filter(Boolean), {
+    encoding: "utf-8",
+    maxBuffer: 50 * 1024 * 1024,
+  });
+  if (result.error) {
+    throw result.error;
+  }
+  if (typeof result.status === "number" && result.status !== 0) {
+    const stderr = (result.stderr || "").toString();
+    const stdout = (result.stdout || "").toString();
+    const details = stderr.trim() || stdout.trim();
+    throw new Error(details || `Git command failed: git ${args.join(" ")}`);
+  }
+  return (result.stdout || "").toString();
 }
 
 function getStagedDiff({ dir, unified, excludes }) {
   const pathspec = buildPathspec(dir, excludes);
   const u = typeof unified === "number" ? `-U${unified}` : "";
-  const command = `git diff --cached ${u} --no-ext-diff --find-renames -- ${pathspec}`;
-  return execSync(command, {
-    encoding: "utf-8",
-    maxBuffer: 50 * 1024 * 1024, // 50 MB
-  });
+  const args = [
+    "diff",
+    "--cached",
+    u,
+    "--no-ext-diff",
+    "--find-renames",
+    "--",
+    ...pathspec,
+  ];
+  return runGitAndCapture(args);
 }
 
 function getStagedStat({ dir, excludes }) {
   const pathspec = buildPathspec(dir, excludes);
-  const command = `git diff --cached --stat --no-ext-diff --find-renames -- ${pathspec}`;
-  return execSync(command, { encoding: "utf-8" });
+  const args = [
+    "diff",
+    "--cached",
+    "--stat",
+    "--no-ext-diff",
+    "--find-renames",
+    "--",
+    ...pathspec,
+  ];
+  return runGitAndCapture(args);
 }
 
 function getStagedNamesOnly({ dir, excludes }) {
   const pathspec = buildPathspec(dir, excludes);
-  const command = `git diff --cached --name-only --diff-filter=ACMRT -- ${pathspec}`;
-  return execSync(command, { encoding: "utf-8" });
+  const args = [
+    "diff",
+    "--cached",
+    "--name-only",
+    "--diff-filter=ACMRT",
+    "--",
+    ...pathspec,
+  ];
+  return runGitAndCapture(args);
 }
 
 function prepareInputForModel({ mode, dir, maxChars, excludes }) {
@@ -135,8 +177,12 @@ async function generateCommitMessage({ inputText, model }) {
 
 // Run git commit with generated message
 function runGitCommit(message) {
-  const command = `git commit -m "${message.replace(/"/g, '\\"')}"`;
-  execSync(command, { stdio: "ignore" });
+  // Avoid shell quoting issues by passing args array
+  const result = spawnSync("git", ["commit", "-m", message], { stdio: "inherit" });
+  if (result.error) throw result.error;
+  if (typeof result.status === "number" && result.status !== 0) {
+    throw new Error("git commit failed");
+  }
 }
 
 // CLI definition
