@@ -1,0 +1,29 @@
+{
+  "name": "committy",
+  "version": "1.0.0",
+  "description": "A CLI tool that generates Git commit messages using OpenAI's ChatGPT",
+  "main": "committy.js",
+  "bin": {
+    "committy": "./committy.js"
+  },
+  "scripts": {
+    "start": "node committy.js"
+  },
+  "keywords": [
+    "cli",
+    "git",
+    "commit",
+    "openai",
+    "chatgpt",
+    "ai"
+  ],
+  "author": "Kurse",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.0.0",
+    "dotenv": "^16.3.1",
+    "openai": "^4.25.0"
+  }
+}
