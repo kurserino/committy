@@ -4,7 +4,7 @@ import { spawnSync } from "child_process";
 import { fileURLToPath, pathToFileURL } from "url";
 
 const configUrl = pathToFileURL(
-  fileURLToPath(new URL("../src/config.js", import.meta.url))
+  fileURLToPath(new URL("../src/config/defaults.js", import.meta.url))
 ).href;
 
 function readDefaultModel(env) {
@@ -20,18 +20,13 @@ function readDefaultModel(env) {
   return result.stdout.trim();
 }
 
-test("DEFAULT_MODEL falls back to gpt-5", () => {
-  const env = { ...process.env };
-  delete env.COMMITTY_MODEL;
-  assert.equal(readDefaultModel(env), "gpt-5");
-});
-
-test("DEFAULT_MODEL reads COMMITTY_MODEL", () => {
-  assert.equal(readDefaultModel({ ...process.env, COMMITTY_MODEL: "gpt-4o" }), "gpt-4o");
+test("DEFAULT_MODEL is gpt-5 and ignores COMMITTY_MODEL", () => {
+  // COMMITTY_MODEL is its own settings layer, resolved at run time
+  assert.equal(readDefaultModel({ ...process.env, COMMITTY_MODEL: "gpt-4o" }), "gpt-5");
 });
 
 test("default excludes cover lockfiles, build output, maps and env files", async () => {
-  const { DEFAULT_EXCLUDES, DEFAULT_MAX_INPUT_CHARS } = await import("../src/config.js");
+  const { DEFAULT_EXCLUDES, DEFAULT_MAX_INPUT_CHARS } = await import("../src/config/defaults.js");
   assert.deepEqual(DEFAULT_EXCLUDES, [
     "package-lock.json",
     "yarn.lock",
@@ -51,7 +46,7 @@ test("default excludes cover lockfiles, build output, maps and env files", async
 });
 
 test("default exclude pathspecs match the defaults at any depth", async () => {
-  const { DEFAULT_EXCLUDES, DEFAULT_EXCLUDE_PATHSPECS } = await import("../src/config.js");
+  const { DEFAULT_EXCLUDES, DEFAULT_EXCLUDE_PATHSPECS } = await import("../src/config/defaults.js");
   assert.equal(DEFAULT_EXCLUDE_PATHSPECS.length, DEFAULT_EXCLUDES.length);
   assert.ok(DEFAULT_EXCLUDE_PATHSPECS.includes(":(exclude,glob)**/package-lock.json"));
   assert.ok(DEFAULT_EXCLUDE_PATHSPECS.includes(":(exclude,glob)**/dist/**"));

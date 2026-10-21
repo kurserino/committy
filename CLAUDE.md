@@ -1,6 +1,6 @@
 # Committy
 
-Node.js ESM CLI that generates Conventional Commit messages from staged changes with the OpenAI API. Entry point `bin/committy.js`; code in `src/` (`git/`, `input/`, `ai/`); tests in `test/` (node:test, real temporary git repos, no network). Specs live in `openspec/specs/`.
+Node.js ESM CLI that generates Conventional Commit messages from staged changes with the OpenAI API. Entry point `bin/committy.js`; code in `src/` (`config/`, `git/`, `input/`, `ai/`); tests in `test/` (node:test, real temporary git repos, no network). Specs live in `openspec/specs/`.
 
 ## Commands
 

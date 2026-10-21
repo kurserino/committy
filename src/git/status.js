@@ -1,4 +1,5 @@
 import { spawnSync } from "child_process";
+import path from "path";
 import { buildPathspec } from "./pathspec.js";
 import { gitError, runGitAndCapture } from "./run.js";
 
@@ -15,6 +16,11 @@ export function ensureGitRepository() {
   if (result.status !== 0 || (result.stdout || "").trim() !== "true") {
     throw new Error("Not a git repository. Run committy inside a git work tree.");
   }
+}
+
+// Absolute path of the work tree root; git prints forward slashes even on Windows
+export function getRepositoryRoot() {
+  return path.resolve(runGitAndCapture(["rev-parse", "--show-toplevel"]).trim());
 }
 
 export function hasStagedChanges({ dir, excludes }) {

@@ -1,9 +1,18 @@
 import { InvalidArgumentError, Option, program } from "commander";
 import { existsSync, readFileSync } from "fs";
+import os from "os";
 import path from "path";
 import chalk from "chalk";
-import { DEFAULT_EXCLUDE_PATHSPECS, DEFAULT_MAX_INPUT_CHARS, DEFAULT_MODEL } from "./config.js";
-import { ensureGitRepository, hasStagedChanges, getUnstagedFileNames } from "./git/status.js";
+import { DEFAULT_MAX_INPUT_CHARS, DEFAULT_MODEL } from "./config/defaults.js";
+import { loadConfigFiles } from "./config/load.js";
+import { resolveSettings } from "./config/resolve.js";
+import { MODES } from "./config/schema.js";
+import {
+  ensureGitRepository,
+  getRepositoryRoot,
+  getUnstagedFileNames,
+  hasStagedChanges,
+} from "./git/status.js";
 import { runGitCommit } from "./git/commit.js";
 import { prepareInputForModel, stripInputHeader } from "./input/prepare.js";
 import { ensureApiKey, generateCommitMessage } from "./ai/openai.js";
@@ -25,14 +34,16 @@ export async function commitAction(dir, options, overrides = {}) {
 
     ensureGitRepository();
 
-    const model = options.model || DEFAULT_MODEL;
-    const maxInputChars = Number(options.maxInputChars || DEFAULT_MAX_INPUT_CHARS);
-    const excludes = [
-      ...(options.defaultExcludes === false ? [] : DEFAULT_EXCLUDE_PATHSPECS),
-      ...(options.exclude && Array.isArray(options.exclude)
-        ? options.exclude
-        : []),
-    ];
+    const { project, user } = loadConfigFiles({
+      repoRoot: getRepositoryRoot(),
+      homeDir: os.homedir(),
+    });
+    const { model, mode, maxInputChars, dryRun, excludes } = resolveSettings({
+      flags: options,
+      env: process.env,
+      project,
+      user,
+    });
     const hasStaged = hasStagedChanges({ dir: targetDir, excludes });
 
     if (!hasStaged) {
@@ -52,7 +63,7 @@ export async function commitAction(dir, options, overrides = {}) {
     }
 
     const inputText = prepareInputForModel({
-      mode: options.mode || "auto",
+      mode,
       dir: targetDir,
       maxChars: maxInputChars,
       excludes,
@@ -92,7 +103,7 @@ export async function commitAction(dir, options, overrides = {}) {
     console.log(chalk.green("\nGenerated message:\n"));
     console.log(chalk.bold(message));
 
-    if (options.dryRun) {
+    if (dryRun) {
       console.log(chalk.gray("\n(Dry run: commit not executed)"));
       return;
     }
@@ -105,8 +116,8 @@ export async function commitAction(dir, options, overrides = {}) {
   }
 }
 
-// CLI definition
-const MODES = ["auto", "full", "unified0", "stat", "names"];
+// CLI definition. Options have no commander defaults: an unset flag stays
+// undefined so config files can supply the value (see resolveSettings)
 
 function parsePositiveInt(value) {
   if (!/^\d+$/.test(value) || Number(value) === 0) {
@@ -126,22 +137,26 @@ export function run(argv = process.argv) {
     .version(version)
     .argument("[dir]", "Directory to use with git diff --cached")
     .option("--dry-run", "Only display the generated commit message")
+    .option("--no-dry-run", "Commit even if a config file sets dryRun")
     .option(
       "--model <model>",
-      "OpenAI model to use (default: env COMMITTY_MODEL or gpt-5)"
+      `OpenAI model to use (default: COMMITTY_MODEL, config files or ${DEFAULT_MODEL})`
     )
     .addOption(
-      new Option("--mode <mode>", "Diff mode").choices(MODES).default("auto")
+      new Option("--mode <mode>", "Diff mode (default: config files or auto)").choices(MODES)
     )
     .option(
       "--max-input-chars <n>",
-      "Max characters to send to the model",
-      parsePositiveInt,
-      DEFAULT_MAX_INPUT_CHARS
+      `Max characters to send to the model (default: config files or ${DEFAULT_MAX_INPUT_CHARS})`,
+      parsePositiveInt
     )
     .option(
       "--exclude <pattern...>",
       "Additional git pathspec patterns to exclude (repeatable)"
+    )
+    .option(
+      "--default-excludes",
+      "Apply default exclude patterns even if a config file disables them"
     )
     .option(
       "--no-default-excludes",

@@ -15,6 +15,7 @@
 - 📁 Accepts directory as argument (only diffs from that directory)
 - 🔻 Token-aware modes to handle large diffs: `auto`, `unified0`, `stat`, `names`
 - 🧹 Default exclude patterns to reduce noise (lockfiles, builds, maps)
+- ⚙️ Per-project (`.committy`) and per-user (`~/.committy`) config files
 
 ---
 
@@ -89,10 +90,12 @@ committy
 | ------------------------ | ---------------------------------------------------------------- |
 | `[dir]`                  | Optional directory to scope the git diff                         |
 | `--dry-run`              | Shows the generated message, no commit                           |
-| `--model <model>`        | OpenAI model to use (default: env `COMMITTY_MODEL` or `gpt-5`)   |
+| `--no-dry-run`           | Commits even if a config file sets `dryRun`                      |
+| `--model <model>`        | OpenAI model to use (default: env `COMMITTY_MODEL`, config files or `gpt-5`) |
 | `--mode <mode>`          | Diff mode: `auto` (default), `full`, `unified0`, `stat`, `names` |
 | `--max-input-chars <n>`  | Max characters to send to the model, a positive integer (default: `48000`) |
 | `--exclude <pattern...>` | Additional git pathspec patterns to exclude (repeatable)         |
+| `--default-excludes`     | Apply the default excludes even if a config file disables them   |
 | `--no-default-excludes`  | Disable default exclude patterns (lock files, builds, maps, etc) |
 | `-V`, `--version`        | Print the installed version                                      |
 
@@ -110,13 +113,48 @@ If the API reports input too large or TPM limits, Committy automatically retries
 
 ---
 
+## ⚙️ Configuration files
+
+Committy reads two optional JSON files:
+
+- **Project**: `.committy` at the root of the git repository (found from any subdirectory). Commit it to share settings with everyone working on the repo.
+- **User**: `.committy` in your home directory (`~/.committy`, or `%USERPROFILE%\.committy` on Windows).
+
+```json
+{
+  "model": "gpt-5-mini",
+  "mode": "auto",
+  "maxInputChars": 30000,
+  "exclude": ["generated/**", "*.pdf"],
+  "defaultExcludes": true,
+  "dryRun": false
+}
+```
+
+| Key               | Type                         | Same as                                  |
+| ----------------- | ---------------------------- | ---------------------------------------- |
+| `model`           | string                       | `--model`                                |
+| `mode`            | `auto`, `full`, `unified0`, `stat`, `names` | `--mode`                  |
+| `maxInputChars`   | positive integer             | `--max-input-chars`                      |
+| `exclude`         | array of pathspec patterns   | `--exclude`                              |
+| `defaultExcludes` | boolean                      | `--default-excludes` / `--no-default-excludes` |
+| `dryRun`          | boolean                      | `--dry-run` / `--no-dry-run`             |
+
+**Precedence**, for each setting: command-line flag > environment variable (`COMMITTY_MODEL`) > project file > user file > built-in default.
+
+`exclude` is the exception: patterns **add up** (defaults + user file + project file + `--exclude`). Patterns from config files are relative to the repository root; `--exclude` patterns are relative to the current directory.
+
+Unknown keys, invalid values or malformed JSON stop the run with an error naming the file. The API key and API endpoint can **never** be set in a config file, so a cloned repository cannot redirect your requests or swap your credentials: keep them in environment variables or committy's own `.env`.
+
+---
+
 ## 🗂 Project Structure
 
 ```
 bin/committy.js      # CLI entrypoint (loads committy's own .env and starts the CLI)
 src/
   cli.js             # Commander definition and main flow
-  config.js          # Defaults (model, excludes, input size)
+  config/            # Defaults, .committy loading/validation and settings precedence
   git/               # Git commands: staged diff, status, commit, pathspec
   input/             # Builds the size-bounded input sent to the model
   ai/                # OpenAI client and prompt

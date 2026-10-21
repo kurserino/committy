@@ -1,4 +1,4 @@
-export const DEFAULT_MODEL = process.env.COMMITTY_MODEL || "gpt-5";
+export const DEFAULT_MODEL = "gpt-5";
 
 export const DEFAULT_MAX_INPUT_CHARS = 48000;
 

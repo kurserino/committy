@@ -3,8 +3,13 @@ import assert from "node:assert/strict";
 import { rmSync } from "fs";
 import path from "path";
 import { createRepo, createTempDir, isolateGitConfig } from "./helpers/repo.js";
-import { ensureGitRepository, getUnstagedFileNames, hasStagedChanges } from "../src/git/status.js";
-import { DEFAULT_EXCLUDES } from "../src/config.js";
+import {
+  ensureGitRepository,
+  getRepositoryRoot,
+  getUnstagedFileNames,
+  hasStagedChanges,
+} from "../src/git/status.js";
+import { DEFAULT_EXCLUDES } from "../src/config/defaults.js";
 
 let repo;
 const originalCwd = process.cwd();
@@ -129,4 +134,10 @@ test("ensureGitRepository fails outside a repository", () => {
     process.chdir(repo.dir);
     rmSync(outside, { recursive: true, force: true });
   }
+});
+
+test("getRepositoryRoot returns the work tree root from a subdirectory", () => {
+  repo.write("packages/app/index.js", "x\n");
+  process.chdir(path.join(repo.dir, "packages", "app"));
+  assert.equal(getRepositoryRoot(), repo.dir);
 });
