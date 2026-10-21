@@ -18,3 +18,8 @@ export const DEFAULT_EXCLUDES = [
   "*.snap",
   ".env*",
 ];
+
+// Glob pathspecs so the defaults also match nested paths (e.g. web/package-lock.json)
+export const DEFAULT_EXCLUDE_PATHSPECS = DEFAULT_EXCLUDES.map(
+  (pattern) => `:(exclude,glob)**/${pattern}`
+);

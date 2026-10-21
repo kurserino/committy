@@ -302,3 +302,53 @@ test("checks the API key before running any git command", async () => {
   assert.match(printed(), /^Error: Missing OPENAI_API_KEY/);
   assertFailed();
 });
+
+test("reports a missing directory before running git", async () => {
+  let gitChecked = false;
+  const deps = fakeDeps();
+  deps.ensureGitRepository = () => {
+    gitChecked = true;
+  };
+  await commitAction("./does-not-exist", defaults(), deps);
+  assert.equal(printed(), "Error: Directory not found: ./does-not-exist");
+  assert.equal(gitChecked, false);
+  assert.equal(deps.calls.generate.length, 0);
+  assertFailed();
+});
+
+test("accepts a directory that exists", async () => {
+  repo.write("src/a.js", "a\n");
+  repo.git("add", "-A");
+  const deps = fakeDeps();
+  await commitAction("./src", defaults({ mode: "names" }), deps);
+  assert.equal(deps.calls.generate[0].inputText, "FILENAMES\nsrc/a.js\n");
+  assertNotFailed();
+});
+
+test("default excludes apply at any depth", async () => {
+  for (const file of [
+    "package-lock.json",
+    "web/package-lock.json",
+    "packages/app/yarn.lock",
+    "packages/app/dist/index.js",
+    "dist/bundle.js",
+    "web/node_modules/x/index.js",
+    "web/app.min.js",
+    "web/.env.local",
+    "src/real.js",
+  ]) {
+    repo.write(file, "x\n");
+  }
+  repo.git("add", "-A", "--force");
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ mode: "names" }), deps);
+  assert.equal(deps.calls.generate[0].inputText, "FILENAMES\nsrc/real.js\n");
+});
+
+test("--no-default-excludes also includes nested files", async () => {
+  repo.write("web/package-lock.json", "{}\n");
+  repo.git("add", "-A");
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ defaultExcludes: false, mode: "names" }), deps);
+  assert.equal(deps.calls.generate[0].inputText, "FILENAMES\nweb/package-lock.json\n");
+});

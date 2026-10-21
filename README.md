@@ -43,6 +43,10 @@ Set `COMMITTY_OPENAI_API_KEY` to give Committy its own key (for example, a proje
 export COMMITTY_OPENAI_API_KEY="sk-..."
 ```
 
+#### Optional: a `.env` file
+
+Instead of exporting variables, you can copy `.env.example` to `.env` **in the folder where you cloned Committy**. Committy only reads that file; a `.env` in the repository you are committing is never read, so a repository cannot swap your key or redirect your diff to another server. Variables exported in your shell take precedence over the file.
+
 ### 🪟 Windows (PowerShell)
 
 On PowerShell, `npm link` creates a `committy.ps1` shim, which Windows may block with the error _"running scripts is disabled on this system"_. Run this once to allow locally installed scripts:
@@ -92,7 +96,7 @@ committy
 | `--no-default-excludes`  | Disable default exclude patterns (lock files, builds, maps, etc) |
 | `-V`, `--version`        | Print the installed version                                      |
 
-Default exclude patterns include: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `*.lock`, `node_modules/**`, `dist/**`, `build/**`, `out/**`, `coverage/**`, `*.min.*`, `*.map`, `*.snap`, `.env*`.
+Default exclude patterns apply at any depth of the repository (so `web/package-lock.json` and `packages/app/dist/**` are excluded too): `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `*.lock`, `node_modules/**`, `dist/**`, `build/**`, `out/**`, `coverage/**`, `*.min.*`, `*.map`, `*.snap`, `.env*`.
 
 ### Handling large diffs
 
@@ -109,7 +113,7 @@ If the API reports input too large or TPM limits, Committy automatically retries
 ## 🗂 Project Structure
 
 ```
-bin/committy.js      # CLI entrypoint (loads .env and starts the CLI)
+bin/committy.js      # CLI entrypoint (loads committy's own .env and starts the CLI)
 src/
   cli.js             # Commander definition and main flow
   config.js          # Defaults (model, excludes, input size)
