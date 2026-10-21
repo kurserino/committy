@@ -87,9 +87,10 @@ committy
 | `--dry-run`              | Shows the generated message, no commit                           |
 | `--model <model>`        | OpenAI model to use (default: env `COMMITTY_MODEL` or `gpt-5`)   |
 | `--mode <mode>`          | Diff mode: `auto` (default), `full`, `unified0`, `stat`, `names` |
-| `--max-input-chars <n>`  | Max characters to send to the model (default: `48000`)           |
+| `--max-input-chars <n>`  | Max characters to send to the model, a positive integer (default: `48000`) |
 | `--exclude <pattern...>` | Additional git pathspec patterns to exclude (repeatable)         |
 | `--no-default-excludes`  | Disable default exclude patterns (lock files, builds, maps, etc) |
+| `-V`, `--version`        | Print the installed version                                      |
 
 Default exclude patterns include: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `*.lock`, `node_modules/**`, `dist/**`, `build/**`, `out/**`, `coverage/**`, `*.min.*`, `*.map`, `*.snap`, `.env*`.
 

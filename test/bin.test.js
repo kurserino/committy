@@ -133,3 +133,42 @@ test("parses repeated --exclude patterns and the directory argument", () => {
   const result = runCli(["src", "--exclude", "*.md", "docs/**"]);
   assert.match(result.stdout, /No staged changes found\./);
 });
+
+test("--version and -V print the package version without an API key or repository", async () => {
+  const { version } = JSON.parse(
+    (await import("fs")).readFileSync(new URL("../package.json", import.meta.url), "utf-8")
+  );
+  for (const flag of ["--version", "-V"]) {
+    const result = spawnSync(process.execPath, [binPath, flag], {
+      cwd: repo.baseDir,
+      encoding: "utf-8",
+      env: { ...process.env, COMMITTY_OPENAI_API_KEY: "", OPENAI_API_KEY: "" },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout.trim(), version);
+  }
+});
+
+test("rejects an invalid --mode and lists the allowed values", () => {
+  repo.write("a.txt", "changed\n");
+  repo.git("add", "a.txt");
+  const result = runCli(["--mode", "foo", "--dry-run"]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--mode/);
+  assert.match(result.stderr, /'foo'/);
+  assert.match(result.stderr, /auto, full, unified0, stat, names/);
+  assert.equal(result.stdout, "");
+});
+
+for (const value of ["abc", "0", "-5", "1.5"]) {
+  test(`rejects --max-input-chars ${value}`, () => {
+    repo.write("a.txt", "changed\n");
+    repo.git("add", "a.txt");
+    const result = runCli([`--max-input-chars=${value}`, "--dry-run"]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /--max-input-chars/);
+    assert.ok(result.stderr.includes(`'${value}'`), result.stderr);
+    assert.match(result.stderr, /Must be a positive integer/);
+    assert.doesNotMatch(result.stdout, /No staged changes to commit/);
+  });
+}

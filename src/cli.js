@@ -1,4 +1,5 @@
-import { program } from "commander";
+import { InvalidArgumentError, Option, program } from "commander";
+import { readFileSync } from "fs";
 import path from "path";
 import chalk from "chalk";
 import { DEFAULT_EXCLUDES, DEFAULT_MAX_INPUT_CHARS, DEFAULT_MODEL } from "./config.js";
@@ -101,25 +102,38 @@ export async function commitAction(dir, options, overrides = {}) {
 }
 
 // CLI definition
+const MODES = ["auto", "full", "unified0", "stat", "names"];
+
+function parsePositiveInt(value) {
+  if (!/^\d+$/.test(value) || Number(value) === 0) {
+    throw new InvalidArgumentError("Must be a positive integer.");
+  }
+  return Number(value);
+}
+
+const { version } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf-8")
+);
+
 export function run(argv = process.argv) {
   program
     .name("committy")
     .description("Generate git commit messages using ChatGPT")
+    .version(version)
     .argument("[dir]", "Directory to use with git diff --cached")
     .option("--dry-run", "Only display the generated commit message")
     .option(
       "--model <model>",
       "OpenAI model to use (default: env COMMITTY_MODEL or gpt-5)"
     )
-    .option(
-      "--mode <mode>",
-      "Diff mode: auto|full|unified0|stat|names (default: auto)",
-      "auto"
+    .addOption(
+      new Option("--mode <mode>", "Diff mode").choices(MODES).default("auto")
     )
     .option(
       "--max-input-chars <n>",
-      `Max characters to send to the model (default: ${DEFAULT_MAX_INPUT_CHARS})`,
-      String(DEFAULT_MAX_INPUT_CHARS)
+      "Max characters to send to the model",
+      parsePositiveInt,
+      DEFAULT_MAX_INPUT_CHARS
     )
     .option(
       "--exclude <pattern...>",

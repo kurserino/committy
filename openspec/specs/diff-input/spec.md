@@ -4,6 +4,7 @@
 Collect the staged changes from git and turn them into a size-bounded text input for the model, scoped to an optional directory and excluding noisy files.
 
 ## Requirements
+
 ### Requirement: Directory scoping
 The CLI SHALL accept an optional `[dir]` argument and restrict all git queries to that path. Absolute paths SHALL be converted to paths relative to the current working directory, and path separators SHALL be normalized to `/` so the pathspec works on Windows, macOS and Linux.
 
@@ -34,11 +35,15 @@ The CLI SHALL accept `--exclude <pattern...>` with one or more extra git pathspe
 - **THEN** changes matching `docs/**` or `*.md` are not considered
 
 ### Requirement: Git invocation
-Git SHALL be invoked through `spawnSync` with an argument array (no shell) and a 50 MB output buffer. A non-zero exit status SHALL raise an error carrying git's stderr (or stdout when stderr is empty).
+Git SHALL be run without a shell, so directory arguments, exclude patterns and commit messages containing spaces, quotes, `$` or backticks are passed to git verbatim on Windows, macOS and Linux. Large staged diffs (tens of megabytes) SHALL be read without failing. A failing git command SHALL raise an error carrying git's stderr (or stdout when stderr is empty).
 
 #### Scenario: Git error surfaced
-- **WHEN** a git command fails (e.g. not a git repository)
+- **WHEN** a git command fails (e.g. checking out a ref that does not exist)
 - **THEN** the error message contains git's own output
+
+#### Scenario: Special characters passed verbatim
+- **WHEN** the generated commit message contains quotes, `$HOME`, backticks, `&` or `|`
+- **THEN** the commit is created with exactly that message
 
 ### Requirement: Input mode selection
 The CLI SHALL accept `--mode` with values `auto` (default), `full`, `unified0`, `stat` and `names`, and SHALL cap the input at `--max-input-chars` characters (default 48000). All diff modes SHALL use `--no-ext-diff` and `--find-renames`.
@@ -82,3 +87,21 @@ After preparing the input, if nothing remains once the `DIFF_U0`/`DIFF_STAT`/`FI
 #### Scenario: Only excluded files staged
 - **WHEN** the prepared input is empty
 - **THEN** the API is not called and no commit is made
+
+### Requirement: Mode validation
+The CLI SHALL reject a `--mode` value other than `auto`, `full`, `unified0`, `stat` or `names`: it SHALL print an error naming the option, the invalid value and the allowed values, and exit with status 1 without running git or calling the API.
+
+#### Scenario: Invalid mode
+- **WHEN** the user runs `committy --mode foo`
+- **THEN** the CLI prints an error mentioning `--mode`, `foo` and the allowed values, and exits with status 1
+
+### Requirement: Input size validation
+The CLI SHALL accept only a positive integer for `--max-input-chars`. Any other value (non-numeric, zero, negative or fractional) SHALL produce an error naming the option and the invalid value, and exit with status 1 without running git or calling the API.
+
+#### Scenario: Non-numeric size
+- **WHEN** the user runs `committy --max-input-chars abc`
+- **THEN** the CLI prints an error mentioning `--max-input-chars` and `abc`, and exits with status 1
+
+#### Scenario: Zero size
+- **WHEN** the user runs `committy --max-input-chars 0`
+- **THEN** the CLI prints an error and exits with status 1 instead of reporting "No staged changes to commit."
