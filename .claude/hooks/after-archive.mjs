@@ -3,7 +3,17 @@ import { addContext, readHookInput } from "./lib.mjs";
 
 const input = readHookInput();
 const command = input.tool_input?.command || "";
-if (!/\bopenspec\s+archive\b/.test(command) || /\s(--help|-h)\b/.test(command)) process.exit(0);
+
+// Only an actual invocation counts: drop quoted text, then require command position
+const unquoted = command.replace(/'[^']*'|"(?:\\.|[^"\\])*"/g, "''");
+if (!/(^|[;&|(\n])\s*openspec\s+archive\b/.test(unquoted)) process.exit(0);
+
+// When the output is available, require OpenSpec's success line ("Change 'x' archived as 'y'.")
+const response = input.tool_response;
+if (response !== undefined) {
+  const output = typeof response === "string" ? response : JSON.stringify(response);
+  if (!/archived as/.test(output)) process.exit(0);
+}
 
 addContext(
   "PostToolUse",
