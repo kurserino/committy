@@ -16,6 +16,8 @@ import {
 import { runGitCommit } from "./git/commit.js";
 import { prepareInputForModel, stripInputHeader } from "./input/prepare.js";
 import { ensureApiKey, generateCommitMessage } from "./ai/openai.js";
+import { STYLE_CHOICES, detectStyle } from "./ai/style.js";
+import { getRecentSubjects } from "./git/log.js";
 
 const defaultDeps = { ensureApiKey, ensureGitRepository, generateCommitMessage, runGitCommit };
 
@@ -38,7 +40,7 @@ export async function commitAction(dir, options, overrides = {}) {
       repoRoot: getRepositoryRoot(),
       homeDir: os.homedir(),
     });
-    const { model, mode, maxInputChars, dryRun, excludes } = resolveSettings({
+    const { model, mode, maxInputChars, dryRun, oneLine, excludes, ...settings } = resolveSettings({
       flags: options,
       env: process.env,
       project,
@@ -74,10 +76,16 @@ export async function commitAction(dir, options, overrides = {}) {
       return;
     }
 
+    let { style } = settings;
+    if (style === "auto") {
+      style = detectStyle(getRecentSubjects(20));
+      console.log(chalk.gray(`Detected commit style: ${style}`));
+    }
+
     console.log(chalk.cyan("Generating commit message..."));
     let message;
     try {
-      message = await generateCommitMessage({ inputText, model });
+      message = await generateCommitMessage({ inputText, model, style, oneLine });
     } catch (err) {
       // If rate limited by TPM or request too large, degrade input and retry once
       const msg = (err && err.message) || "";
@@ -94,10 +102,14 @@ export async function commitAction(dir, options, overrides = {}) {
           maxChars: Math.min(maxInputChars, 20000),
           excludes,
         });
-        message = await generateCommitMessage({ inputText: fallback, model });
+        message = await generateCommitMessage({ inputText: fallback, model, style, oneLine });
       } else {
         throw err;
       }
+    }
+
+    if (!message) {
+      throw new Error("The model returned an empty commit message");
     }
 
     console.log(chalk.green("\nGenerated message:\n"));
@@ -142,6 +154,13 @@ export function run(argv = process.argv) {
       "--model <model>",
       `OpenAI model to use (default: COMMITTY_MODEL, config files or ${DEFAULT_MODEL})`
     )
+    .addOption(
+      new Option("--style <style>", "Commit message style (default: config files or conventional)").choices(
+        STYLE_CHOICES
+      )
+    )
+    .option("--one-line", "Single-line message (default unless a config file sets oneLine)")
+    .option("--no-one-line", "Subject line plus a short bullet-point body")
     .addOption(
       new Option("--mode <mode>", "Diff mode (default: config files or auto)").choices(MODES)
     )

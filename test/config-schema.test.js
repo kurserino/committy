@@ -12,6 +12,8 @@ test("accepts an empty object and every valid key", () => {
       exclude: ["docs/**", "*.pdf"],
       defaultExcludes: false,
       dryRun: true,
+      style: "conventional-gitmoji",
+      oneLine: false,
     }),
     null
   );
@@ -53,6 +55,8 @@ test("rejects invalid values naming the key", () => {
     [{ exclude: [1] }, /"exclude"/],
     [{ defaultExcludes: "false" }, /"defaultExcludes" must be true or false/],
     [{ dryRun: 1 }, /"dryRun" must be true or false/],
+    [{ style: "emoji" }, /"style" must be one of conventional, gitmoji, conventional-gitmoji, simple, auto/],
+    [{ oneLine: "true" }, /"oneLine" must be true or false/],
   ];
   for (const [config, expected] of cases) {
     assert.match(validateConfig(config), expected, JSON.stringify(config));

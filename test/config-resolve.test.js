@@ -9,6 +9,8 @@ test("built-in defaults with no layers", () => {
     mode: "auto",
     maxInputChars: 48000,
     dryRun: false,
+    style: "conventional",
+    oneLine: true,
     excludes: DEFAULT_EXCLUDE_PATHSPECS,
   });
 });
@@ -86,4 +88,19 @@ test("excludes accumulate across layers, config patterns relative to the root", 
     ":(exclude,glob)**/*.svg",
     "docs/**",
   ]);
+});
+
+test("style follows flag > project > user > default", () => {
+  assert.equal(resolveSettings({ user: { style: "gitmoji" } }).style, "gitmoji");
+  assert.equal(resolveSettings({ user: { style: "gitmoji" }, project: { style: "auto" } }).style, "auto");
+  assert.equal(
+    resolveSettings({ flags: { style: "simple" }, user: { style: "gitmoji" } }).style,
+    "simple"
+  );
+});
+
+test("oneLine from config, overridden by --one-line", () => {
+  assert.equal(resolveSettings({ user: { oneLine: false } }).oneLine, false);
+  assert.equal(resolveSettings({ flags: { oneLine: true }, user: { oneLine: false } }).oneLine, true);
+  assert.equal(resolveSettings({ flags: { oneLine: false } }).oneLine, false);
 });

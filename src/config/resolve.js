@@ -3,6 +3,7 @@ import {
   DEFAULT_MAX_INPUT_CHARS,
   DEFAULT_MODEL,
 } from "./defaults.js";
+import { DEFAULT_STYLE } from "../ai/style.js";
 
 const DEFAULT_MODE = "auto";
 
@@ -23,6 +24,8 @@ export function resolveSettings({ flags = {}, env = {}, project = {}, user = {} 
     mode: pick(flags.mode, project.mode, user.mode) ?? DEFAULT_MODE,
     maxInputChars: maxInputChars === undefined ? DEFAULT_MAX_INPUT_CHARS : Number(maxInputChars),
     dryRun: pick(flags.dryRun, project.dryRun, user.dryRun) ?? false,
+    style: pick(flags.style, project.style, user.style) ?? DEFAULT_STYLE,
+    oneLine: pick(flags.oneLine, project.oneLine, user.oneLine) ?? true,
     excludes: [
       ...(defaultExcludes === false ? [] : DEFAULT_EXCLUDE_PATHSPECS),
       ...(user.exclude ?? []).map(fromRoot),

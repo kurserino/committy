@@ -109,3 +109,10 @@ test("reads plain UTF-8 with non-ASCII text", () => {
   const file = write(repoRoot, '{ "exclude": ["docs/açúcar/**"] }');
   assert.deepEqual(loadConfigFile(file), { exclude: ["docs/açúcar/**"] });
 });
+
+test("an invalid style names the file and the key", () => {
+  const file = write(repoRoot, '{ "style": "emoji" }');
+  assert.throws(() => loadConfigFile(file), (err) =>
+    err.message.startsWith(`Invalid config file ${file}: "style"`)
+  );
+});

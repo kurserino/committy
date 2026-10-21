@@ -525,3 +525,118 @@ test("malformed JSON in the user file fails with its path", async () => {
   assert.ok(printed().startsWith(`Error: Invalid config file ${path.join(home, ".committy")}: `));
   assertFailed();
 });
+
+// Message style and line mode
+
+const commitSubjects = (...subjects) => {
+  subjects.forEach((subject, i) => {
+    repo.write(`history-${i}.txt`, `${subject}\n`);
+    repo.commitAll(subject);
+  });
+};
+
+test("uses the conventional style and one line by default", async () => {
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate[0].style, "conventional");
+  assert.equal(deps.calls.generate[0].oneLine, true);
+  assert.doesNotMatch(printed(), /Detected commit style/);
+});
+
+test("style comes from the project file", async () => {
+  writeProjectConfig({ style: "gitmoji" });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate[0].style, "gitmoji");
+});
+
+test("--style overrides the config files", async () => {
+  writeUserConfig({ style: "gitmoji" });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ style: "simple" }), deps);
+  assert.equal(deps.calls.generate[0].style, "simple");
+});
+
+test("auto style detects a gitmoji history", async () => {
+  commitSubjects("✨ add login", "🐛 fix crash", "📝 update docs");
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ style: "auto" }), deps);
+  assert.equal(deps.calls.generate[0].style, "gitmoji");
+  assert.match(printed(), /Detected commit style: gitmoji/);
+});
+
+test("auto style falls back to conventional on a mixed history", async () => {
+  commitSubjects("✨ add login", "Fix crash", "wip");
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ style: "auto" }), deps);
+  assert.equal(deps.calls.generate[0].style, "conventional");
+  assert.match(printed(), /Detected commit style: conventional/);
+});
+
+test("auto style works in a repository without commits", async () => {
+  const fresh = createRepo();
+  try {
+    process.chdir(fresh.dir);
+    fresh.write("a.js", "a\n");
+    fresh.git("add", "a.js");
+    const deps = fakeDeps();
+    await commitAction(undefined, defaults({ style: "auto" }), deps);
+    assert.equal(deps.calls.generate[0].style, "conventional");
+    assertNotFailed();
+  } finally {
+    process.chdir(repo.dir);
+    fresh.cleanup();
+  }
+});
+
+test("oneLine false from the user file commits the full message", async () => {
+  writeUserConfig({ oneLine: false });
+  stageChange();
+  const body = "feat: add login\n\n- Add the form\n- Validate input";
+  const deps = fakeDeps({ message: body });
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate[0].oneLine, false);
+  assert.deepEqual(deps.calls.commit, [body]);
+});
+
+test("--one-line overrides oneLine false in a config file", async () => {
+  writeUserConfig({ oneLine: false });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ oneLine: true }), deps);
+  assert.equal(deps.calls.generate[0].oneLine, true);
+});
+
+test("the TPM retry keeps the style and line mode", async () => {
+  writeProjectConfig({ style: "simple", oneLine: false });
+  stageChange();
+  const deps = fakeDeps({ errors: [new Error("tokens per min")] });
+  await commitAction(undefined, defaults(), deps);
+  assert.deepEqual(
+    deps.calls.generate.map(({ style, oneLine }) => ({ style, oneLine })),
+    [{ style: "simple", oneLine: false }, { style: "simple", oneLine: false }]
+  );
+});
+
+test("an empty generated message is an error and nothing is committed", async () => {
+  stageChange();
+  const deps = fakeDeps({ message: "" });
+  await commitAction(undefined, defaults(), deps);
+  assert.deepEqual(deps.calls.commit, []);
+  assert.match(printed(), /Error: The model returned an empty commit message/);
+  assert.doesNotMatch(printed(), /Generated message/);
+  assertFailed();
+});
+
+test("an empty generated message also fails a dry run", async () => {
+  stageChange();
+  const deps = fakeDeps({ message: "" });
+  await commitAction(undefined, defaults({ dryRun: true }), deps);
+  assert.match(printed(), /Error: The model returned an empty commit message/);
+  assertFailed();
+});
