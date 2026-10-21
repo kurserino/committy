@@ -31,7 +31,14 @@ afterEach(() => {
 // Environment for the CLI: no inherited API settings, overrides applied on top
 // (an undefined override removes the variable)
 function cliEnv(overrides = {}) {
-  const env = { ...process.env, COMMITTY_OPENAI_API_KEY: "sk-test", NO_COLOR: "1" };
+  // HOME/USERPROFILE point at an empty dir so the developer's ~/.committy is never read
+  const env = {
+    ...process.env,
+    COMMITTY_OPENAI_API_KEY: "sk-test",
+    NO_COLOR: "1",
+    HOME: repo.baseDir,
+    USERPROFILE: repo.baseDir,
+  };
   for (const name of ["OPENAI_API_KEY", "OPENAI_BASE_URL", "COMMITTY_MODEL", "FORCE_COLOR"]) {
     delete env[name];
   }
@@ -244,3 +251,21 @@ for (const value of ["abc", "0", "-5", "1.5"]) {
     assert.doesNotMatch(result.stdout, /No staged changes to commit/);
   });
 }
+
+test("rejects a repository .committy that tries to set the API endpoint", async (t) => {
+  const stub = await startStub(t);
+  repo.write(".committy", JSON.stringify({ baseURL: stub.baseUrl, apiKey: "sk-from-repo" }));
+  stageChange();
+  const result = await runCliAsync([]);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Invalid config file .*\.committy: unknown key "baseURL"/);
+  assert.equal(stub.requests.length, 0);
+});
+
+test("help and version do not read config files, even invalid ones", () => {
+  repo.write(".committy", "{ invalid");
+  repo.write("../.committy", JSON.stringify({ mode: "foo" }));
+  for (const args of [["--version"], ["--help"]]) {
+    assert.equal(runCli(args, { COMMITTY_OPENAI_API_KEY: undefined }).status, 0);
+  }
+});

@@ -1,20 +1,29 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { createRepo, numberedLines } from "./helpers/repo.js";
 
 process.env.COMMITTY_OPENAI_API_KEY ||= "sk-test";
 const { commitAction } = await import("../src/cli.js");
-const { DEFAULT_MODEL } = await import("../src/config.js");
+const { DEFAULT_MODEL } = await import("../src/config/defaults.js");
 
 const ANSI = /\x1b\[[0-9;]*m/g;
 
 let repo;
+let home;
 let output;
 const originalCwd = process.cwd();
+const originalEnv = { ...process.env };
 
 beforeEach((t) => {
   repo = createRepo();
+  // Isolated home directory so the developer's ~/.committy is never read
+  home = path.join(repo.baseDir, "home");
+  mkdirSync(home);
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  delete process.env.COMMITTY_MODEL;
   repo.write("app.js", numberedLines(50));
   repo.commitAll();
   process.chdir(repo.dir);
@@ -27,6 +36,10 @@ beforeEach((t) => {
 
 afterEach(() => {
   process.chdir(originalCwd);
+  for (const name of ["HOME", "USERPROFILE", "COMMITTY_MODEL"]) {
+    if (originalEnv[name] === undefined) delete process.env[name];
+    else process.env[name] = originalEnv[name];
+  }
   // Errors set process.exitCode; reset it so the test runner itself does not fail
   process.exitCode = undefined;
   repo.cleanup();
@@ -37,13 +50,13 @@ const assertNotFailed = () => assert.notEqual(process.exitCode, 1);
 
 const printed = () => output.join("\n");
 
-// Default commander option values, as parsed for `committy` with no flags
-const defaults = (overrides = {}) => ({
-  mode: "auto",
-  maxInputChars: "48000",
-  defaultExcludes: true,
-  ...overrides,
-});
+// Parsed options as commander gives them: an unpassed flag is absent
+const defaults = (overrides = {}) => ({ ...overrides });
+
+const writeProjectConfig = (config, relDir = "") =>
+  writeFileSync(path.join(repo.dir, relDir, ".committy"), JSON.stringify(config));
+const writeUserConfig = (config) =>
+  writeFileSync(path.join(home, ".committy"), JSON.stringify(config));
 
 function fakeDeps({ message = "feat: generated message", errors = [] } = {}) {
   const calls = { generate: [], commit: [] };
@@ -351,4 +364,164 @@ test("--no-default-excludes also includes nested files", async () => {
   const deps = fakeDeps();
   await commitAction(undefined, defaults({ defaultExcludes: false, mode: "names" }), deps);
   assert.equal(deps.calls.generate[0].inputText, "FILENAMES\nweb/package-lock.json\n");
+});
+
+// Config files (.committy in the repository root and in the home directory)
+
+const stageFiles = (...files) => {
+  for (const file of files) repo.write(file, `${file}\n`);
+  repo.git("add", ...files);
+};
+
+test("no config files keeps flag and default behavior", async () => {
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate[0].model, "gpt-5");
+  assert.match(deps.calls.generate[0].inputText, /^DIFF_U0\n/);
+  assert.deepEqual(deps.calls.commit, ["feat: generated message"]);
+});
+
+test("project file is found from a subdirectory", async () => {
+  writeProjectConfig({ mode: "stat" });
+  stageFiles("packages/app/index.js");
+  process.chdir(path.join(repo.dir, "packages", "app"));
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.match(deps.calls.generate[0].inputText, /^DIFF_STAT\n/);
+  assertNotFailed();
+});
+
+test("user file applies in any repository", async () => {
+  writeUserConfig({ model: "gpt-5-mini" });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate[0].model, "gpt-5-mini");
+});
+
+test("project file overrides user file", async () => {
+  writeUserConfig({ mode: "names" });
+  writeProjectConfig({ mode: "stat" });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.match(deps.calls.generate[0].inputText, /^DIFF_STAT\n/);
+});
+
+test("flag overrides both files", async () => {
+  writeUserConfig({ mode: "stat" });
+  writeProjectConfig({ mode: "stat" });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ mode: "names" }), deps);
+  assert.equal(deps.calls.generate[0].inputText, "FILENAMES\napp.js\n");
+});
+
+test("an unpassed --max-input-chars does not hide the config value", async () => {
+  writeProjectConfig({ maxInputChars: 60 });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  const { inputText } = deps.calls.generate[0];
+  assert.match(inputText, /^DIFF_STAT\n/);
+  assert.ok(inputText.length <= 60);
+});
+
+test("COMMITTY_MODEL overrides config files", async () => {
+  process.env.COMMITTY_MODEL = "gpt-4o";
+  writeProjectConfig({ model: "gpt-5-mini" });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate[0].model, "gpt-4o");
+});
+
+test("--model overrides COMMITTY_MODEL and config files", async () => {
+  process.env.COMMITTY_MODEL = "gpt-4o";
+  writeUserConfig({ model: "gpt-5-mini" });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ model: "o3" }), deps);
+  assert.equal(deps.calls.generate[0].model, "o3");
+});
+
+test("dryRun from a config file skips the commit", async () => {
+  writeUserConfig({ dryRun: true });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.deepEqual(deps.calls.commit, []);
+  assert.match(printed(), /\(Dry run: commit not executed\)/);
+});
+
+test("--no-dry-run forces the commit", async () => {
+  writeUserConfig({ dryRun: true });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ dryRun: false }), deps);
+  assert.deepEqual(deps.calls.commit, ["feat: generated message"]);
+});
+
+test("defaultExcludes false in the project file includes lock files", async () => {
+  writeProjectConfig({ defaultExcludes: false, mode: "names" });
+  stageFiles("package-lock.json");
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate[0].inputText, "FILENAMES\npackage-lock.json\n");
+});
+
+test("--default-excludes re-enables the defaults", async () => {
+  writeProjectConfig({ defaultExcludes: false, mode: "names" });
+  stageFiles("package-lock.json", "src/a.js");
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ defaultExcludes: true }), deps);
+  assert.equal(deps.calls.generate[0].inputText, "FILENAMES\nsrc/a.js\n");
+});
+
+test("excludes from both files and flags accumulate", async () => {
+  writeUserConfig({ exclude: ["*.pdf"] });
+  writeProjectConfig({ exclude: ["generated/**"], mode: "names" });
+  stageFiles("manual.pdf", "generated/api.js", "docs/guide.md", "yarn.lock", "src/a.js");
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults({ exclude: ["docs/**"] }), deps);
+  assert.equal(deps.calls.generate[0].inputText, "FILENAMES\nsrc/a.js\n");
+});
+
+test("config excludes are relative to the repository root", async () => {
+  writeProjectConfig({ exclude: ["generated/**"], mode: "names" });
+  stageFiles("generated/api.js", "src/a.js");
+  process.chdir(path.join(repo.dir, "src"));
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate[0].inputText, "FILENAMES\nsrc/a.js\n");
+});
+
+test("mode from a config file applies without --mode", async () => {
+  writeProjectConfig({ mode: "names" });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate[0].inputText, "FILENAMES\napp.js\n");
+});
+
+test("an invalid config file fails before calling the API", async () => {
+  writeProjectConfig({ modle: "gpt-4o" });
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate.length, 0);
+  const file = path.join(repo.dir, ".committy");
+  assert.ok(printed().startsWith(`Error: Invalid config file ${file}: unknown key "modle"`));
+  assertFailed();
+});
+
+test("malformed JSON in the user file fails with its path", async () => {
+  writeFileSync(path.join(home, ".committy"), '{ "mode": "stat",, }');
+  stageChange();
+  const deps = fakeDeps();
+  await commitAction(undefined, defaults(), deps);
+  assert.equal(deps.calls.generate.length, 0);
+  assert.ok(printed().startsWith(`Error: Invalid config file ${path.join(home, ".committy")}: `));
+  assertFailed();
 });
