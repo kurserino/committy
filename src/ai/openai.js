@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import chalk from "chalk";
-import { buildPrompt } from "./prompt.js";
+import { buildPrompt, cleanMessage } from "./prompt.js";
 
 let openai;
 
@@ -25,17 +25,23 @@ function getClient() {
 }
 
 // Generate commit message using OpenAI
-export async function generateCommitMessage({ inputText, model, client = getClient() }) {
+export async function generateCommitMessage({
+  inputText,
+  model,
+  style,
+  oneLine = true,
+  client = getClient(),
+}) {
   console.log(chalk.gray(`Using model: ${model}`));
   const response = await client.chat.completions.create({
     model,
     messages: [
       {
         role: "user",
-        content: buildPrompt(inputText),
+        content: buildPrompt(inputText, { style, oneLine }),
       },
     ],
   });
 
-  return response.choices[0].message.content.trim();
+  return cleanMessage(response.choices[0].message.content, { oneLine });
 }

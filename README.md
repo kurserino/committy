@@ -16,6 +16,7 @@
 - 🔻 Token-aware modes to handle large diffs: `auto`, `unified0`, `stat`, `names`
 - 🧹 Default exclude patterns to reduce noise (lockfiles, builds, maps)
 - ⚙️ Per-project (`.committy`) and per-user (`~/.committy`) config files
+- 🎨 Message styles (Conventional Commits, gitmoji, plain git, or auto-detected) and optional bullet-point body
 
 ---
 
@@ -92,6 +93,9 @@ committy
 | `--dry-run`              | Shows the generated message, no commit                           |
 | `--no-dry-run`           | Commits even if a config file sets `dryRun`                      |
 | `--model <model>`        | OpenAI model to use (default: env `COMMITTY_MODEL`, config files or `gpt-5`) |
+| `--style <style>`        | Message style: `conventional` (default), `gitmoji`, `conventional-gitmoji`, `simple`, `auto` |
+| `--one-line`             | Single-line message (the default)                                |
+| `--no-one-line`          | Subject line plus a short bullet-point body                      |
 | `--mode <mode>`          | Diff mode: `auto` (default), `full`, `unified0`, `stat`, `names` |
 | `--max-input-chars <n>`  | Max characters to send to the model, a positive integer (default: `48000`) |
 | `--exclude <pattern...>` | Additional git pathspec patterns to exclude (repeatable)         |
@@ -127,7 +131,9 @@ Committy reads two optional JSON files:
   "maxInputChars": 30000,
   "exclude": ["generated/**", "*.pdf"],
   "defaultExcludes": true,
-  "dryRun": false
+  "dryRun": false,
+  "style": "conventional",
+  "oneLine": true
 }
 ```
 
@@ -139,6 +145,8 @@ Committy reads two optional JSON files:
 | `exclude`         | array of pathspec patterns   | `--exclude`                              |
 | `defaultExcludes` | boolean                      | `--default-excludes` / `--no-default-excludes` |
 | `dryRun`          | boolean                      | `--dry-run` / `--no-dry-run`             |
+| `style`           | `conventional`, `gitmoji`, `conventional-gitmoji`, `simple`, `auto` | `--style` |
+| `oneLine`         | boolean                      | `--one-line` / `--no-one-line`           |
 
 **Precedence**, for each setting: command-line flag > environment variable (`COMMITTY_MODEL`) > project file > user file > built-in default.
 
@@ -147,6 +155,30 @@ Committy reads two optional JSON files:
 Files may be UTF-8 (with or without BOM) or UTF-16 with BOM, so files saved by Notepad or written with `>` in Windows PowerShell 5.1 work.
 
 Unknown keys, invalid values or malformed JSON stop the run with an error naming the file. The API key and API endpoint can **never** be set in a config file, so a cloned repository cannot redirect your requests or swap your credentials: keep them in environment variables or committy's own `.env`.
+
+---
+
+## 🎨 Message styles
+
+| Style                  | Example                                           |
+| ---------------------- | ------------------------------------------------- |
+| `conventional`         | `feat(config): add project and user config files` |
+| `gitmoji`              | `✨ add project and user config files`            |
+| `conventional-gitmoji` | `feat(config): ✨ add project and user config files` |
+| `simple`               | `Add project and user config files`               |
+
+`auto` looks at the subjects of the last 20 non-merge commits (locally, no API call) and uses the style that more than half of them follow, falling back to `conventional`. It prints `Detected commit style: <style>`.
+
+Messages are one line by default. With `--no-one-line` (or `"oneLine": false`) Committy writes a subject, a blank line and 2-5 short bullets on what changed and why:
+
+```
+feat(config): add project and user config files
+
+- Resolve settings as flag > env > project > user
+- Validate keys strictly; never read the API key or URL
+```
+
+In one-line mode only the first line of the model's answer is used, so the commit never gets an unexpected body.
 
 ---
 

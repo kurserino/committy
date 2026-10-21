@@ -269,3 +269,12 @@ test("help and version do not read config files, even invalid ones", () => {
     assert.equal(runCli(args, { COMMITTY_OPENAI_API_KEY: undefined }).status, 0);
   }
 });
+
+test("rejects an invalid --style before running git", () => {
+  const result = runCli(["--style", "foo"], {}, repo.baseDir);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /--style/);
+  assert.match(result.stderr, /foo/);
+  assert.match(result.stderr, /conventional.*gitmoji.*conventional-gitmoji.*simple.*auto/);
+  assert.doesNotMatch(result.stderr, /Not a git repository/);
+});

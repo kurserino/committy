@@ -31,6 +31,23 @@ test("sends the prompt with the chosen model and returns the trimmed message", a
   ]);
 });
 
+test("asks for the given style and line mode and keeps the body", async (t) => {
+  t.mock.method(console, "log", () => {});
+  const client = fakeClient("feat: add login\n\n- Add the form\n");
+  const options = { style: "gitmoji", oneLine: false };
+  const message = await generateCommitMessage({ inputText: "x", model: "gpt-5", client, ...options });
+
+  assert.equal(message, "feat: add login\n\n- Add the form");
+  assert.equal(client.calls[0].messages[0].content, buildPrompt("x", options));
+});
+
+test("keeps only the first line in one-line mode", async (t) => {
+  t.mock.method(console, "log", () => {});
+  const client = fakeClient("```\nfeat: add login\n\nAdds the login form.\n```");
+  const message = await generateCommitMessage({ inputText: "x", model: "gpt-5", client });
+  assert.equal(message, "feat: add login");
+});
+
 test("prints the model in use", async (t) => {
   const log = t.mock.method(console, "log", () => {});
   await generateCommitMessage({ inputText: "x", model: "gpt-5", client: fakeClient("fix: x") });

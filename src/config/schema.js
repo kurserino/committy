@@ -1,3 +1,5 @@
+import { STYLE_CHOICES } from "../ai/style.js";
+
 export const MODES = ["auto", "full", "unified0", "stat", "names"];
 
 const isNonEmptyString = (v) => typeof v === "string" && v.trim() !== "";
@@ -14,6 +16,8 @@ export const CONFIG_KEYS = {
       : "must be an array of non-empty strings",
   defaultExcludes: (v) => (typeof v === "boolean" ? null : "must be true or false"),
   dryRun: (v) => (typeof v === "boolean" ? null : "must be true or false"),
+  style: (v) => (STYLE_CHOICES.includes(v) ? null : `must be one of ${STYLE_CHOICES.join(", ")}`),
+  oneLine: (v) => (typeof v === "boolean" ? null : "must be true or false"),
 };
 
 // Returns the reason the config object is invalid, or null when it is valid
