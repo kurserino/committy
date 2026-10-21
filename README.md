@@ -27,13 +27,21 @@ npm install
 npm link
 ```
 
-> You must set the OpenAI API key as a global environment variable:
+> Committy uses the standard `OPENAI_API_KEY` environment variable. If you already have it set, there is nothing else to do:
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+Add it to your shell config (e.g. `~/.zshrc`, `~/.bashrc`) to persist it across sessions.
+
+#### Optional: a dedicated key for Committy
+
+Set `COMMITTY_OPENAI_API_KEY` to give Committy its own key (for example, a project key to track its cost or limit its permissions). When set, it takes precedence over `OPENAI_API_KEY`:
 
 ```bash
 export COMMITTY_OPENAI_API_KEY="sk-..."
 ```
-
-Add it to your shell config (e.g. `~/.zshrc`, `~/.bashrc`) to persist it across sessions.
 
 ### 🪟 Windows (PowerShell)
 
@@ -79,9 +87,10 @@ committy
 | `--dry-run`              | Shows the generated message, no commit                           |
 | `--model <model>`        | OpenAI model to use (default: env `COMMITTY_MODEL` or `gpt-5`)   |
 | `--mode <mode>`          | Diff mode: `auto` (default), `full`, `unified0`, `stat`, `names` |
-| `--max-input-chars <n>`  | Max characters to send to the model (default: `48000`)           |
+| `--max-input-chars <n>`  | Max characters to send to the model, a positive integer (default: `48000`) |
 | `--exclude <pattern...>` | Additional git pathspec patterns to exclude (repeatable)         |
 | `--no-default-excludes`  | Disable default exclude patterns (lock files, builds, maps, etc) |
+| `-V`, `--version`        | Print the installed version                                      |
 
 Default exclude patterns include: `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `*.lock`, `node_modules/**`, `dist/**`, `build/**`, `out/**`, `coverage/**`, `*.min.*`, `*.map`, `*.snap`, `.env*`.
 
@@ -94,6 +103,22 @@ Default exclude patterns include: `package-lock.json`, `yarn.lock`, `pnpm-lock.y
 - Add extra excludes: `committy --exclude 'docs/**' '*.md'`
 
 If the API reports input too large or TPM limits, Committy automatically retries with a summarized `--stat` input.
+
+---
+
+## 🗂 Project Structure
+
+```
+bin/committy.js      # CLI entrypoint (loads .env and starts the CLI)
+src/
+  cli.js             # Commander definition and main flow
+  config.js          # Defaults (model, excludes, input size)
+  git/               # Git commands: staged diff, status, commit, pathspec
+  input/             # Builds the size-bounded input sent to the model
+  ai/                # OpenAI client and prompt
+test/                # Unit tests (node:test) — run with `npm test`
+openspec/            # Specs and change proposals (OpenSpec)
+```
 
 ---
 

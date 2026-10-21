@@ -1,0 +1,11 @@
+schema: spec-driven
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+context: |
+  Committy is a Node.js ESM CLI installed globally via npm link: bin/committy.js is a thin entrypoint, code lives in src/ (git/, input/, ai/), tests in test/ use node:test.
+  Designs and tasks must cover Windows (PowerShell), macOS and Linux.
+  Never invoke git through a shell; always pass an argument array to spawnSync.
+  Keep the prompt sent to the model compact; token cost matters.
+  Write OpenSpec artifacts in English, matching the README and code.
