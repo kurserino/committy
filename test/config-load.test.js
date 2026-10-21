@@ -89,3 +89,23 @@ test("an unreadable path names the file", () => {
     err.message.startsWith(`Invalid config file ${file}: `)
   );
 });
+
+test("decodes UTF-8 with a byte order mark", () => {
+  const file = write(repoRoot, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('{ "mode": "stat" }')]));
+  assert.deepEqual(loadConfigFile(file), { mode: "stat" });
+});
+
+test("decodes UTF-16LE with a byte order mark (Windows PowerShell 5.1 redirection)", () => {
+  const file = write(homeDir, Buffer.from('\uFEFF{"mode":"stat"}\r\n', "utf16le"));
+  assert.deepEqual(loadConfigFile(file), { mode: "stat" });
+});
+
+test("decodes UTF-16BE with a byte order mark", () => {
+  const file = write(homeDir, Buffer.from('\uFEFF{"mode":"stat"}', "utf16le").swap16());
+  assert.deepEqual(loadConfigFile(file), { mode: "stat" });
+});
+
+test("reads plain UTF-8 with non-ASCII text", () => {
+  const file = write(repoRoot, '{ "exclude": ["docs/açúcar/**"] }');
+  assert.deepEqual(loadConfigFile(file), { exclude: ["docs/açúcar/**"] });
+});

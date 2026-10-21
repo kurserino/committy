@@ -144,6 +144,8 @@ Committy reads two optional JSON files:
 
 `exclude` is the exception: patterns **add up** (defaults + user file + project file + `--exclude`). Patterns from config files are relative to the repository root; `--exclude` patterns are relative to the current directory.
 
+Files may be UTF-8 (with or without BOM) or UTF-16 with BOM, so files saved by Notepad or written with `>` in Windows PowerShell 5.1 work.
+
 Unknown keys, invalid values or malformed JSON stop the run with an error naming the file. The API key and API endpoint can **never** be set in a config file, so a cloned repository cannot redirect your requests or swap your credentials: keep them in environment variables or committy's own `.env`.
 
 ---
