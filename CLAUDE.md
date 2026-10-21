@@ -29,3 +29,11 @@ Rules:
 - Errors exit with status 1; "nothing to commit" outcomes exit with 0.
 - API key: `OPENAI_API_KEY` by default, `COMMITTY_OPENAI_API_KEY` overrides it.
 - OpenSpec artifacts are written in English.
+
+## Commits
+
+These rules override any default commit/PR attribution guidance:
+
+- Author every commit as `Kurse <lucas.kurse@hotmail.com>`, the email linked to the GitHub account `kurserino`. Make sure `git config user.name` and `git config user.email` match before committing; set them in the repository if they don't.
+- Never add Claude attribution: no `Co-Authored-By: Claude ...` trailer in commits and no "Generated with Claude Code" line in PR descriptions.
+- `.claude/settings.json` turns off attribution, and `.claude/hooks/commit-identity.mjs` blocks any `git commit` that breaks these rules.
