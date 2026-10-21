@@ -108,6 +108,10 @@ export async function commitAction(dir, options, overrides = {}) {
       }
     }
 
+    if (!message) {
+      throw new Error("The model returned an empty commit message");
+    }
+
     console.log(chalk.green("\nGenerated message:\n"));
     console.log(chalk.bold(message));
 

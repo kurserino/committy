@@ -622,3 +622,21 @@ test("the TPM retry keeps the style and line mode", async () => {
     [{ style: "simple", oneLine: false }, { style: "simple", oneLine: false }]
   );
 });
+
+test("an empty generated message is an error and nothing is committed", async () => {
+  stageChange();
+  const deps = fakeDeps({ message: "" });
+  await commitAction(undefined, defaults(), deps);
+  assert.deepEqual(deps.calls.commit, []);
+  assert.match(printed(), /Error: The model returned an empty commit message/);
+  assert.doesNotMatch(printed(), /Generated message/);
+  assertFailed();
+});
+
+test("an empty generated message also fails a dry run", async () => {
+  stageChange();
+  const deps = fakeDeps({ message: "" });
+  await commitAction(undefined, defaults({ dryRun: true }), deps);
+  assert.match(printed(), /Error: The model returned an empty commit message/);
+  assertFailed();
+});
