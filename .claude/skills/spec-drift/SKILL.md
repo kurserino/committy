@@ -52,4 +52,8 @@ Never edit `openspec/specs/` directly and never change code outside an OpenSpec 
 
 ## 6. Record the check
 
-Write the current `git rev-parse HEAD` to `openspec/.last-drift-check` and tell the user to commit it together with any spec changes.
+Write the current `git rev-parse HEAD` to `openspec/.last-drift-check` and commit it (following the CLAUDE.md commit rules) together with any spec changes.
+
+## 7. Finish the feature
+
+If this check closes a feature on a branch other than `main`, continue with the finish-feature skill.
