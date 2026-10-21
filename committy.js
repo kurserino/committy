@@ -119,6 +119,56 @@ function getStagedNamesOnly({ dir, excludes }) {
   return runGitAndCapture(args);
 }
 
+function hasStagedChanges({ dir, excludes }) {
+  const pathspec = buildPathspec(dir, excludes);
+  const args = ["diff", "--cached", "--quiet", "--", ...pathspec];
+  const result = spawnSync("git", args, { encoding: "utf-8" });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status === 0) {
+    return false;
+  }
+
+  if (result.status === 1) {
+    return true;
+  }
+
+  const stderr = (result.stderr || "").toString();
+  const stdout = (result.stdout || "").toString();
+  const details = stderr.trim() || stdout.trim();
+  throw new Error(details || `Git command failed: git ${args.join(" ")}`);
+}
+
+function getUnstagedFileNames({ dir, excludes }) {
+  const pathspec = buildPathspec(dir, excludes);
+  const unstagedTracked = runGitAndCapture(["diff", "--name-only", "--", ...pathspec]);
+  const untracked = runGitAndCapture([
+    "ls-files",
+    "--others",
+    "--exclude-standard",
+    "--",
+    ...pathspec,
+  ]);
+
+  return Array.from(
+    new Set(
+      `${unstagedTracked}\n${untracked}`
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function stripInputHeader(inputText) {
+  return inputText
+    .replace(/^(DIFF_U0|DIFF_STAT|FILENAMES)\n/, "")
+    .trim();
+}
+
 function prepareInputForModel({ mode, dir, maxChars, excludes }) {
   // mode: auto | full | unified0 | stat | names
   const ex = excludes || [];
@@ -225,6 +275,23 @@ program
           ? options.exclude
           : []),
       ];
+      const hasStaged = hasStagedChanges({ dir: targetDir, excludes });
+
+      if (!hasStaged) {
+        const unstagedFiles = getUnstagedFileNames({ dir: targetDir, excludes });
+        console.log(chalk.yellow("No staged changes found."));
+        if (unstagedFiles.length > 0) {
+          const addTarget = dir && dir.trim() ? dir : ".";
+          console.log(
+            chalk.gray(
+              `You still have unstaged changes. Run "git add ${addTarget}" and try again.`
+            )
+          );
+        } else {
+          console.log(chalk.gray("Working tree is clean for the selected path."));
+        }
+        return;
+      }
 
       const inputText = prepareInputForModel({
         mode: options.mode || "auto",
@@ -233,7 +300,7 @@ program
         excludes,
       });
 
-      if (!inputText.trim()) {
+      if (!stripInputHeader(inputText)) {
         console.log(chalk.yellow("No staged changes to commit."));
         return;
       }
