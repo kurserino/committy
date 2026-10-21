@@ -49,3 +49,10 @@ test("default excludes cover lockfiles, build output, maps and env files", async
   ]);
   assert.equal(DEFAULT_MAX_INPUT_CHARS, 48000);
 });
+
+test("default exclude pathspecs match the defaults at any depth", async () => {
+  const { DEFAULT_EXCLUDES, DEFAULT_EXCLUDE_PATHSPECS } = await import("../src/config.js");
+  assert.equal(DEFAULT_EXCLUDE_PATHSPECS.length, DEFAULT_EXCLUDES.length);
+  assert.ok(DEFAULT_EXCLUDE_PATHSPECS.includes(":(exclude,glob)**/package-lock.json"));
+  assert.ok(DEFAULT_EXCLUDE_PATHSPECS.includes(":(exclude,glob)**/dist/**"));
+});

@@ -36,3 +36,11 @@ test("appends excludes as git exclude pathspecs", () => {
     ":(exclude)dist/**",
   ]);
 });
+
+test("passes pathspecs that already carry magic through unchanged", () => {
+  assert.deepEqual(buildPathspec("", [":(exclude,glob)**/dist/**", "*.md"]), [
+    ".",
+    ":(exclude,glob)**/dist/**",
+    ":(exclude)*.md",
+  ]);
+});

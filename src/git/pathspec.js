@@ -8,6 +8,7 @@ export function buildPathspec(dir, excludes) {
     : rawRoot;
   const normalizedRoot = relativeRoot && relativeRoot !== "" ? relativeRoot : ".";
   const gitRoot = normalizedRoot.split(path.sep).join("/");
-  // Return as array to avoid shell quoting issues on Windows/PowerShell
-  return [gitRoot, ...excludes.map((p) => `:(exclude)${p}`)];
+  // Return as array to avoid shell quoting issues on Windows/PowerShell.
+  // Entries that already carry pathspec magic (":(...)") are passed through.
+  return [gitRoot, ...excludes.map((p) => (p.startsWith(":(") ? p : `:(exclude)${p}`))];
 }

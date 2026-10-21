@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
-import "dotenv/config";
-import { run } from "../src/cli.js";
+import { loadEnv } from "../src/env.js";
+
+// Load the .env before the CLI modules read settings such as COMMITTY_MODEL
+loadEnv();
+const { run } = await import("../src/cli.js");
 
 run();

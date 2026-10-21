@@ -1,8 +1,8 @@
 import { InvalidArgumentError, Option, program } from "commander";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 import chalk from "chalk";
-import { DEFAULT_EXCLUDES, DEFAULT_MAX_INPUT_CHARS, DEFAULT_MODEL } from "./config.js";
+import { DEFAULT_EXCLUDE_PATHSPECS, DEFAULT_MAX_INPUT_CHARS, DEFAULT_MODEL } from "./config.js";
 import { ensureGitRepository, hasStagedChanges, getUnstagedFileNames } from "./git/status.js";
 import { runGitCommit } from "./git/commit.js";
 import { prepareInputForModel, stripInputHeader } from "./input/prepare.js";
@@ -17,14 +17,18 @@ export async function commitAction(dir, options, overrides = {}) {
   };
   try {
     ensureApiKey();
-    ensureGitRepository();
 
     const targetDir = dir ? path.resolve(process.cwd(), dir) : "";
+    if (targetDir && !existsSync(targetDir)) {
+      throw new Error(`Directory not found: ${dir}`);
+    }
+
+    ensureGitRepository();
 
     const model = options.model || DEFAULT_MODEL;
     const maxInputChars = Number(options.maxInputChars || DEFAULT_MAX_INPUT_CHARS);
     const excludes = [
-      ...(options.defaultExcludes === false ? [] : DEFAULT_EXCLUDES),
+      ...(options.defaultExcludes === false ? [] : DEFAULT_EXCLUDE_PATHSPECS),
       ...(options.exclude && Array.isArray(options.exclude)
         ? options.exclude
         : []),
