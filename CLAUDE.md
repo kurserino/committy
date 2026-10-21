@@ -17,6 +17,9 @@ Every change to behavior in `src/` or `bin/` goes through OpenSpec so the specs 
 3. **Verify**: `npm test` and `openspec validate <change> --strict` must pass.
 4. **Archive**: `/opsx:archive` merges the deltas into `openspec/specs/`.
 5. **Drift check**: run the spec-drift skill after every archive. It compares the specs with the code and asks the user how to resolve each divergence.
+6. **Finish**: once the drift check is recorded and committed, run the finish-feature skill. It shows the commits and the PR draft for validation, then asks, one step at a time, whether to open the PR, merge it, delete the remote branch, and update `main` (deleting the local branch or not).
+
+Work on a branch created from an up-to-date `main` for every feature.
 
 Rules:
 - Never edit `openspec/specs/` by hand; spec changes go through a change's delta specs.
