@@ -27,13 +27,21 @@ npm install
 npm link
 ```
 
-> You must set the OpenAI API key as a global environment variable:
+> Committy uses the standard `OPENAI_API_KEY` environment variable. If you already have it set, there is nothing else to do:
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+Add it to your shell config (e.g. `~/.zshrc`, `~/.bashrc`) to persist it across sessions.
+
+#### Optional: a dedicated key for Committy
+
+Set `COMMITTY_OPENAI_API_KEY` to give Committy its own key (for example, a project key to track its cost or limit its permissions). When set, it takes precedence over `OPENAI_API_KEY`:
 
 ```bash
 export COMMITTY_OPENAI_API_KEY="sk-..."
 ```
-
-Add it to your shell config (e.g. `~/.zshrc`, `~/.bashrc`) to persist it across sessions.
 
 ### 🪟 Windows (PowerShell)
 
@@ -94,6 +102,22 @@ Default exclude patterns include: `package-lock.json`, `yarn.lock`, `pnpm-lock.y
 - Add extra excludes: `committy --exclude 'docs/**' '*.md'`
 
 If the API reports input too large or TPM limits, Committy automatically retries with a summarized `--stat` input.
+
+---
+
+## 🗂 Project Structure
+
+```
+bin/committy.js      # CLI entrypoint (loads .env and starts the CLI)
+src/
+  cli.js             # Commander definition and main flow
+  config.js          # Defaults (model, excludes, input size)
+  git/               # Git commands: staged diff, status, commit, pathspec
+  input/             # Builds the size-bounded input sent to the model
+  ai/                # OpenAI client and prompt
+test/                # Unit tests (node:test) — run with `npm test`
+openspec/            # Specs and change proposals (OpenSpec)
+```
 
 ---
 
