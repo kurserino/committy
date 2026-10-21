@@ -35,6 +35,14 @@ export COMMITTY_OPENAI_API_KEY="sk-..."
 
 Add it to your shell config (e.g. `~/.zshrc`, `~/.bashrc`) to persist it across sessions.
 
+### 🪟 Windows (PowerShell)
+
+On PowerShell, `npm link` creates a `committy.ps1` shim, which Windows may block with the error _"running scripts is disabled on this system"_. Run this once to allow locally installed scripts:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
 ---
 
 ## 🧪 Usage
