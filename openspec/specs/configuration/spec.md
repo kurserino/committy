@@ -74,7 +74,7 @@ For each setting the CLI SHALL use the first value found in this order: the CLI 
 
 #### Scenario: Unpassed flag does not hide config
 - **WHEN** `<repo>/.committy` sets `"maxInputChars": 20000` and the user runs `committy` without `--max-input-chars`
-- **THEN** the input is capped at 20000 characters, not the built-in 48000
+- **THEN** the input is capped at 20000 characters, not the built-in 16000
 
 #### Scenario: Env var overrides files
 - **WHEN** `COMMITTY_MODEL=gpt-4o` is set and `<repo>/.committy` sets `"model": "gpt-5-mini"`
