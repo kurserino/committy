@@ -3,7 +3,13 @@ import { existsSync, readFileSync } from "fs";
 import os from "os";
 import path from "path";
 
-const WANTED = ["claudekit-core@claudekit", "claudekit-openspec@claudekit"];
+const WANTED = ["claudekit-core@claudekit", "claudekit-openspec@claudekit", "claudekit-diff@claudekit"];
+// What stops working without each plugin, for the warning
+const ROLE = {
+  "claudekit-core@claudekit": "commit-identity guard",
+  "claudekit-openspec@claudekit": "OpenSpec skills and guards",
+  "claudekit-diff@claudekit": "/diff panel at session start",
+};
 const here = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude");
 
@@ -28,7 +34,7 @@ if (missing.length > 0) {
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "SessionStart",
-        additionalContext: `Missing claudekit plugins: ${missing.join(", ")}. Commit-identity and OpenSpec guards are NOT active. Tell the user now and offer to run:\n${cmds.join("\n")}`,
+        additionalContext: `Missing claudekit plugins: ${missing.join(", ")}. NOT active: ${missing.map((id) => ROLE[id]).join(", ")}. Tell the user now and offer to run:\n${cmds.join("\n")}`,
       },
     })
   );

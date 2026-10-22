@@ -20,7 +20,8 @@
   "enabledPlugins": {
     "ponytail@ponytail": true,
     "claudekit-core@claudekit": true,
-    "claudekit-openspec@claudekit": true
+    "claudekit-openspec@claudekit": true,
+    "claudekit-diff@claudekit": true
   },
   "extraKnownMarketplaces": {
     "ponytail": {

@@ -7,14 +7,14 @@ import { fileURLToPath } from "url";
 import { createTempDir } from "./helpers/repo.js";
 
 const hook = fileURLToPath(new URL("../.claude/hooks/ensure-claudekit.mjs", import.meta.url));
-const IDS = ["claudekit-core@claudekit", "claudekit-openspec@claudekit"];
+const IDS = ["claudekit-core@claudekit", "claudekit-openspec@claudekit", "claudekit-diff@claudekit"];
 
-// Runs the hook for `project` with a plugin file where every claudekit plugin has the given install entry
-function runHook({ project, install }) {
+// Runs the hook for `project` with a plugin file where each plugin in `ids` has the given install entry
+function runHook({ project, install, ids = IDS }) {
   const configDir = createTempDir();
   if (install) {
     mkdirSync(path.join(configDir, "plugins"));
-    const plugins = Object.fromEntries(IDS.map((id) => [id, [install]]));
+    const plugins = Object.fromEntries(ids.map((id) => [id, [install]]));
     writeFileSync(path.join(configDir, "plugins", "installed_plugins.json"), JSON.stringify({ plugins }));
   }
   const result = spawnSync(process.execPath, [hook], {
@@ -25,7 +25,15 @@ function runHook({ project, install }) {
 }
 
 test("warns when the plugin file does not exist", () => {
-  assert.match(runHook({ project: createTempDir() }), /Missing claudekit plugins: claudekit-core@claudekit, claudekit-openspec@claudekit/);
+  assert.match(runHook({ project: createTempDir() }), /Missing claudekit plugins: claudekit-core@claudekit, claudekit-openspec@claudekit, claudekit-diff@claudekit/);
+});
+
+test("warns about claudekit-diff only when it is the one plugin missing", () => {
+  const project = createTempDir();
+  const warning = runHook({ project, install: { scope: "project", projectPath: project }, ids: IDS.slice(0, 2) });
+  assert.match(warning, /Missing claudekit plugins: claudekit-diff@claudekit\. NOT active: \/diff panel at session start\./);
+  assert.match(warning, /claude plugin install claudekit-diff@claudekit --scope project/);
+  assert.doesNotMatch(warning, /commit-identity|OpenSpec|install claudekit-(core|openspec)/);
 });
 
 test("warns when the plugins are installed for another project only", () => {
