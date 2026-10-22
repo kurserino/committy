@@ -86,6 +86,14 @@ test("prints the model in use", async (t) => {
   assert.match(String(log.mock.calls[0].arguments[0]), /Using model: gpt-5/);
 });
 
+test("reports a reply cut off by the token limit instead of returning it", async (t) => {
+  t.mock.method(console, "log", () => {});
+  const client = {
+    chat: { completions: { create: async () => ({ choices: [{ finish_reason: "length", message: { content: "feat: add lo" } }] }) } },
+  };
+  await assert.rejects(generateCommitMessage({ inputText: "x", model: "gpt-5", client }), /The model reply was cut off/);
+});
+
 test("propagates API errors", async (t) => {
   t.mock.method(console, "log", () => {});
   const client = {

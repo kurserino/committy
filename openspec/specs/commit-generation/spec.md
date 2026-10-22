@@ -205,3 +205,10 @@ The `max_completion_tokens` cap SHALL be larger in multi-line mode than in one-l
 #### Scenario: Multi-line cap is larger
 - **WHEN** requests are sent for a gpt-5 model in one-line and in multi-line mode
 - **THEN** the multi-line request has a greater `max_completion_tokens` than the one-line request
+
+### Requirement: Cut-off reply
+When the API reports that the reply was cut off by the output token limit (finish reason `length`), the CLI SHALL print `Error: The model reply was cut off` and exit with status 1 without creating a commit.
+
+#### Scenario: Reply cut off
+- **WHEN** the API responds with finish reason `length`
+- **THEN** the CLI prints "Error: The model reply was cut off", exits with status 1 and no commit is made

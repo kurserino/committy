@@ -16,6 +16,8 @@ export function stripInputHeader(inputText) {
 // or returns null when not even the header and a first hunk line fit
 function truncateFileDiff(fileDiff, budget) {
   if (fileDiff.length <= budget) return fileDiff;
+  // A budget below the marker length would make the slice below count from the end
+  if (budget <= TRUNCATED_MARKER.length) return null;
   const room = fileDiff.slice(0, budget - TRUNCATED_MARKER.length);
   const firstHunk = room.indexOf("\n@@");
   if (firstHunk === -1) return null;

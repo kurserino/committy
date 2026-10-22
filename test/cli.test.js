@@ -251,6 +251,17 @@ test("does not retry on other API errors and reports them", async () => {
   assertFailed();
 });
 
+test("reports a cut-off reply, does not retry and makes no commit", async () => {
+  stageChange();
+  const deps = fakeDeps({ errors: [new Error("The model reply was cut off")] });
+  await commitAction(undefined, defaults(), deps);
+
+  assert.equal(deps.calls.generate.length, 1);
+  assert.deepEqual(deps.calls.commit, []);
+  assert.match(printed(), /Error: The model reply was cut off/);
+  assertFailed();
+});
+
 test("reports an error when the retry also fails", async () => {
   stageChange();
   const deps = fakeDeps({
