@@ -1,9 +1,15 @@
-// SessionStart: tell Claude when a claudekit plugin is not installed for this project
+// SessionStart: tell Claude when a plugin the project relies on is not installed for it
 import { existsSync, readFileSync } from "fs";
 import os from "os";
 import path from "path";
 
-const WANTED = ["claudekit-core@claudekit", "claudekit-openspec@claudekit"];
+// Each plugin's marketplace repo and what stops working without it, for the warning
+const PLUGINS = {
+  "claudekit-core@claudekit": { repo: "kurserino/claudekit", role: "commit-identity guard" },
+  "claudekit-openspec@claudekit": { repo: "kurserino/claudekit", role: "OpenSpec skills and guards" },
+  "claudekit-diff@claudekit": { repo: "kurserino/claudekit", role: "/diff panel at session start" },
+  "ponytail@ponytail": { repo: "DietrichGebert/ponytail", role: "ponytail lazy-solution mode" },
+};
 const here = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude");
 
@@ -21,14 +27,18 @@ const active = (id) =>
     (i) => i.scope === "user" || (i.projectPath && path.relative(i.projectPath, here) === "")
   );
 
-const missing = WANTED.filter((id) => !active(id));
+const missing = Object.keys(PLUGINS).filter((id) => !active(id));
 if (missing.length > 0) {
-  const cmds = ["claude plugin marketplace add kurserino/claudekit --scope project", ...missing.map((id) => `claude plugin install ${id} --scope project`)];
+  const repos = [...new Set(missing.map((id) => PLUGINS[id].repo))];
+  const cmds = [
+    ...repos.map((repo) => `claude plugin marketplace add ${repo} --scope project`),
+    ...missing.map((id) => `claude plugin install ${id} --scope project`),
+  ];
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "SessionStart",
-        additionalContext: `Missing claudekit plugins: ${missing.join(", ")}. Commit-identity and OpenSpec guards are NOT active. Tell the user now and offer to run:\n${cmds.join("\n")}`,
+        additionalContext: `Missing project plugins: ${missing.join(", ")}. NOT active: ${missing.map((id) => PLUGINS[id].role).join(", ")}. Tell the user now and offer to run:\n${cmds.join("\n")}`,
       },
     })
   );
