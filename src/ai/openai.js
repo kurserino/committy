@@ -59,5 +59,7 @@ export async function generateCommitMessage({
     ...outputLimits(model, oneLine),
   });
 
-  return cleanMessage(response.choices[0].message.content, { oneLine });
+  const [choice] = response.choices;
+  if (choice.finish_reason === "length") throw new Error("The model reply was cut off");
+  return cleanMessage(choice.message.content, { oneLine });
 }

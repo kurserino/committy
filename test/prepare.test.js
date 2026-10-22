@@ -172,6 +172,18 @@ test("the default size cap keeps a 20000 char diff within 16000 chars", () => {
   assert.ok(input.length <= 16000);
 });
 
+test("six files under a small limit stay within the limit", () => {
+  const names = Array.from({ length: 6 }, (_, i) => `g${i}.txt`);
+  for (const name of names) repo.write(name, numberedLines(300));
+  repo.commitAll("add files");
+  for (const name of names) repo.write(name, numberedLines(300).replace(/line/g, "LINE"));
+  repo.git("add", "-A");
+  for (const maxChars of [1100, 1500, 2500]) {
+    const input = prepare({ mode: "auto", maxChars });
+    assert.ok(input.length <= maxChars, `limit ${maxChars} gave ${input.length} chars`);
+  }
+});
+
 test("auto mode uses the stat alone when it takes more than half of the hybrid cap", () => {
   // Long names make the stat of many files longer than 6000 chars (half of the 12000 cap)
   const names = Array.from({ length: 120 }, (_, i) => `generated/with/a/rather/long/directory/path/module-number-${i}.txt`);
