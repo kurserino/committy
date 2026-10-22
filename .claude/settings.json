@@ -11,8 +11,8 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(git *)",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/commit-identity.mjs\"",
+            "if": "Bash(git *)",
             "timeout": 10
           }
         ]
@@ -34,8 +34,8 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(openspec archive*)",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/after-archive.mjs\"",
+            "if": "Bash(openspec archive*)",
             "timeout": 10
           }
         ]
@@ -52,5 +52,16 @@
         ]
       }
     ]
+  },
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "ponytail@ponytail": true
   }
 }
