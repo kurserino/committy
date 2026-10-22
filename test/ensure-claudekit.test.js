@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 import { createTempDir } from "./helpers/repo.js";
 
 const hook = fileURLToPath(new URL("../.claude/hooks/ensure-claudekit.mjs", import.meta.url));
-const IDS = ["claudekit-core@claudekit", "claudekit-openspec@claudekit", "claudekit-diff@claudekit"];
+const IDS = ["claudekit-core@claudekit", "claudekit-openspec@claudekit", "claudekit-diff@claudekit", "ponytail@ponytail"];
 
 // Runs the hook for `project` with a plugin file where each plugin in `ids` has the given install entry
 function runHook({ project, install, ids = IDS }) {
@@ -25,20 +25,29 @@ function runHook({ project, install, ids = IDS }) {
 }
 
 test("warns when the plugin file does not exist", () => {
-  assert.match(runHook({ project: createTempDir() }), /Missing claudekit plugins: claudekit-core@claudekit, claudekit-openspec@claudekit, claudekit-diff@claudekit/);
+  assert.match(runHook({ project: createTempDir() }), /Missing project plugins: claudekit-core@claudekit, claudekit-openspec@claudekit, claudekit-diff@claudekit, ponytail@ponytail/);
 });
 
 test("warns about claudekit-diff only when it is the one plugin missing", () => {
   const project = createTempDir();
-  const warning = runHook({ project, install: { scope: "project", projectPath: project }, ids: IDS.slice(0, 2) });
-  assert.match(warning, /Missing claudekit plugins: claudekit-diff@claudekit\. NOT active: \/diff panel at session start\./);
+  const warning = runHook({ project, install: { scope: "project", projectPath: project }, ids: IDS.filter((id) => id !== "claudekit-diff@claudekit") });
+  assert.match(warning, /Missing project plugins: claudekit-diff@claudekit\. NOT active: \/diff panel at session start\./);
   assert.match(warning, /claude plugin install claudekit-diff@claudekit --scope project/);
   assert.doesNotMatch(warning, /commit-identity|OpenSpec|install claudekit-(core|openspec)/);
 });
 
+test("adds only the ponytail marketplace when ponytail is the one plugin missing", () => {
+  const project = createTempDir();
+  const warning = runHook({ project, install: { scope: "project", projectPath: project }, ids: IDS.filter((id) => id !== "ponytail@ponytail") });
+  assert.match(warning, /Missing project plugins: ponytail@ponytail\. NOT active: ponytail lazy-solution mode\./);
+  assert.match(warning, /claude plugin marketplace add DietrichGebert\/ponytail --scope project/);
+  assert.match(warning, /claude plugin install ponytail@ponytail --scope project/);
+  assert.doesNotMatch(warning, /kurserino\/claudekit|install claudekit-/);
+});
+
 test("warns when the plugins are installed for another project only", () => {
   const warning = runHook({ project: createTempDir(), install: { scope: "project", projectPath: createTempDir() } });
-  assert.match(warning, /Missing claudekit plugins/);
+  assert.match(warning, /Missing project plugins/);
 });
 
 test("stays silent when the plugins are installed for this project", () => {
