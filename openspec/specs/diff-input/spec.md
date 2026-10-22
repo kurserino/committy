@@ -99,7 +99,7 @@ The `stat` mode SHALL send `git diff --cached --stat` prefixed with `DIFF_STAT`,
 - **THEN** the model receives `FILENAMES` followed by one staged file path per line
 
 ### Requirement: Automatic fallback in auto mode
-In `auto` mode the CLI SHALL use the zero-context diff (prefixed `DIFF_U0`) when it is non-empty and fits the limit. When it exceeds the limit, the CLI SHALL send a hybrid input (prefixed `DIFF_PARTIAL`) made of the full `stat` summary followed by the zero-context diff truncated per file, within the limit and within 12000 characters, with at most 3000 characters per file. When the hybrid input cannot include any diff content, the CLI SHALL use the `stat` summary when non-empty (truncated to the limit), otherwise the file name list. Git errors in the first two steps SHALL be ignored and cause the next step to be tried.
+In `auto` mode the CLI SHALL use the zero-context diff (prefixed `DIFF_U0`) when it is non-empty and fits the limit; otherwise the hybrid input (see "Hybrid input in auto mode"); otherwise the `stat` summary when non-empty (truncated to the limit); otherwise the file name list. Git errors in the first two steps SHALL be ignored and cause the next step to be tried.
 
 #### Scenario: Small diff
 - **WHEN** the zero-context diff fits within `--max-input-chars`
@@ -155,8 +155,15 @@ When a `[dir]` argument is given and that path does not exist, the CLI SHALL pri
 - **THEN** the CLI prints `Error: Directory not found: ./does-not-exist` and exits with status 1
 
 ### Requirement: Empty prepared input
-After preparing the input, if nothing remains once the `DIFF_U0`/`DIFF_STAT`/`FILENAMES` header is stripped, the CLI SHALL print "No staged changes to commit." and stop without calling the API.
+After preparing the input, if nothing remains once the `DIFF_U0`/`DIFF_PARTIAL`/`DIFF_STAT`/`FILENAMES` header is stripped, the CLI SHALL print "No staged changes to commit." and stop without calling the API.
 
 #### Scenario: Only deletions staged in names mode
 - **WHEN** the user runs `committy --mode names` and the only staged changes are file deletions
 - **THEN** the CLI prints "No staged changes to commit.", the API is not called and no commit is made
+
+### Requirement: Hybrid input in auto mode
+The hybrid input (prefixed `DIFF_PARTIAL`) SHALL be the full `stat` summary followed by the zero-context diff cut per file, at most 12000 characters (or `--max-input-chars` when smaller) with at most 3000 characters per file. It SHALL NOT be used when the `stat` summary takes more than half of that size or when no diff content fits; the `stat` fallback applies instead.
+
+#### Scenario: Stat summary takes more than half of the size
+- **WHEN** the zero-context diff exceeds `--max-input-chars` and the stat summary is longer than half of the hybrid size cap
+- **THEN** the model receives the `DIFF_STAT` summary instead of a `DIFF_PARTIAL` input
