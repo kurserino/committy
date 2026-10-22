@@ -5,9 +5,9 @@ import { DEFAULT_EXCLUDE_PATHSPECS } from "../src/config/defaults.js";
 
 test("built-in defaults with no layers", () => {
   assert.deepEqual(resolveSettings({}), {
-    model: "gpt-5",
+    model: "gpt-5-mini",
     mode: "auto",
-    maxInputChars: 48000,
+    maxInputChars: 16000,
     dryRun: false,
     style: "conventional",
     oneLine: true,

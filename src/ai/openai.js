@@ -24,6 +24,21 @@ function getClient() {
   return openai;
 }
 
+// Only these gpt-5 reasoning models accept reasoning_effort "minimal"; others would reject it
+const REASONING_MODEL = /^gpt-5(-mini|-nano)?(-\d{4}-\d{2}-\d{2})?$/;
+
+// Output caps leave room for the message once reasoning is minimal
+const MAX_COMPLETION_TOKENS = { oneLine: 256, multiLine: 512 };
+
+export function outputLimits(model, oneLine) {
+  if (!REASONING_MODEL.test(model)) return {};
+  return {
+    reasoning_effort: "minimal",
+    verbosity: "low",
+    max_completion_tokens: oneLine ? MAX_COMPLETION_TOKENS.oneLine : MAX_COMPLETION_TOKENS.multiLine,
+  };
+}
+
 // Generate commit message using OpenAI
 export async function generateCommitMessage({
   inputText,
@@ -41,6 +56,7 @@ export async function generateCommitMessage({
         content: buildPrompt(inputText, { style, oneLine }),
       },
     ],
+    ...outputLimits(model, oneLine),
   });
 
   return cleanMessage(response.choices[0].message.content, { oneLine });

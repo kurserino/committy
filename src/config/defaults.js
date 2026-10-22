@@ -1,6 +1,6 @@
-export const DEFAULT_MODEL = "gpt-5";
+export const DEFAULT_MODEL = "gpt-5-mini";
 
-export const DEFAULT_MAX_INPUT_CHARS = 48000;
+export const DEFAULT_MAX_INPUT_CHARS = 16000;
 
 // Exclude noisy paths by default to reduce tokens
 export const DEFAULT_EXCLUDES = [

@@ -1,6 +1,6 @@
 # Committy
 
-**Committy** is a lightweight CLI tool that uses OpenAI models (default: gpt-5) to generate smart, concise, and well-formatted Git commit messages based on your staged changes.
+**Committy** is a lightweight CLI tool that uses OpenAI models (default: gpt-5-mini) to generate smart, concise, and well-formatted Git commit messages based on your staged changes.
 
 > Let AI write your commit messages – so you can focus on shipping great code.
 
@@ -8,7 +8,7 @@
 
 ## ✨ Features
 
-- 💬 Generates commit messages using OpenAI API (default model: gpt-5)
+- 💬 Generates commit messages using OpenAI API (default model: gpt-5-mini)
 - 🧠 Understands the context of your staged `git diff`
 - 🚀 Automatically commits with the generated message
 - 🔍 `--dry-run` option to preview messages before committing
@@ -92,12 +92,12 @@ committy
 | `[dir]`                  | Optional directory to scope the git diff                         |
 | `--dry-run`              | Shows the generated message, no commit                           |
 | `--no-dry-run`           | Commits even if a config file sets `dryRun`                      |
-| `--model <model>`        | OpenAI model to use (default: env `COMMITTY_MODEL`, config files or `gpt-5`) |
+| `--model <model>`        | OpenAI model to use (default: env `COMMITTY_MODEL`, config files or `gpt-5-mini`) |
 | `--style <style>`        | Message style: `conventional` (default), `gitmoji`, `conventional-gitmoji`, `simple`, `auto` |
 | `--one-line`             | Single-line message (the default)                                |
 | `--no-one-line`          | Subject line plus a short bullet-point body                      |
 | `--mode <mode>`          | Diff mode: `auto` (default), `full`, `unified0`, `stat`, `names` |
-| `--max-input-chars <n>`  | Max characters to send to the model, a positive integer (default: `48000`) |
+| `--max-input-chars <n>`  | Max characters to send to the model, a positive integer (default: `16000`) |
 | `--exclude <pattern...>` | Additional git pathspec patterns to exclude (repeatable)         |
 | `--default-excludes`     | Apply the default excludes even if a config file disables them   |
 | `--no-default-excludes`  | Disable default exclude patterns (lock files, builds, maps, etc) |
@@ -107,10 +107,11 @@ Default exclude patterns apply at any depth of the repository (so `web/package-l
 
 ### Handling large diffs
 
-- Use automatic fallback (default): `committy`
+- Use automatic fallback (default): `committy`. It sends the zero-context diff when it fits `--max-input-chars`; otherwise the full `--stat` plus each file's diff cut to a few thousand characters (marked `[truncated]`), so one huge file cannot hide the others; then `--stat` alone, then file names
 - Force minimal context per hunk: `committy --mode unified0`
 - Use summary only: `committy --mode stat`
-- Aggressive size cap: `committy --mode unified0 --max-input-chars 30000`
+- Smaller size cap: `committy --mode unified0 --max-input-chars 8000`
+- Larger size cap: `committy --max-input-chars 48000`
 - Add extra excludes: `committy --exclude 'docs/**' '*.md'`
 
 If the API reports input too large or TPM limits, Committy automatically retries with a summarized `--stat` input.

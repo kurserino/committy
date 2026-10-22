@@ -11,7 +11,7 @@ test("defaults to a single-line Conventional Commit and includes the input", () 
 
 test("describes every input format the model can receive", () => {
   const prompt = buildPrompt("");
-  for (const format of ["DIFF", "U0", "STAT", "FILENAMES"]) {
+  for (const format of ["DIFF", "U0", "STAT", "FILENAMES", "PARTIAL", "[truncated]"]) {
     assert.ok(prompt.includes(format), `prompt should mention ${format}`);
   }
 });

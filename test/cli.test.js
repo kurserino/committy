@@ -377,7 +377,7 @@ test("no config files keeps flag and default behavior", async () => {
   stageChange();
   const deps = fakeDeps();
   await commitAction(undefined, defaults(), deps);
-  assert.equal(deps.calls.generate[0].model, "gpt-5");
+  assert.equal(deps.calls.generate[0].model, "gpt-5-mini");
   assert.match(deps.calls.generate[0].inputText, /^DIFF_U0\n/);
   assert.deepEqual(deps.calls.commit, ["feat: generated message"]);
 });
@@ -393,11 +393,11 @@ test("project file is found from a subdirectory", async () => {
 });
 
 test("user file applies in any repository", async () => {
-  writeUserConfig({ model: "gpt-5-mini" });
+  writeUserConfig({ model: "gpt-5" });
   stageChange();
   const deps = fakeDeps();
   await commitAction(undefined, defaults(), deps);
-  assert.equal(deps.calls.generate[0].model, "gpt-5-mini");
+  assert.equal(deps.calls.generate[0].model, "gpt-5");
 });
 
 test("project file overrides user file", async () => {

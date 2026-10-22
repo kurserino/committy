@@ -1,6 +1,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { createRepo, numberedLines } from "./helpers/repo.js";
+import { DEFAULT_MAX_INPUT_CHARS } from "../src/config/defaults.js";
 import { prepareInputForModel, stripInputHeader } from "../src/input/prepare.js";
 
 let repo;
@@ -37,6 +38,7 @@ test("stripInputHeader strips known input headers", () => {
   assert.equal(stripInputHeader("DIFF_U0\ndiff --git a/x b/x"), "diff --git a/x b/x");
   assert.equal(stripInputHeader("DIFF_STAT\n x | 1 +"), "x | 1 +");
   assert.equal(stripInputHeader("FILENAMES\nsrc/a.js\n"), "src/a.js");
+  assert.equal(stripInputHeader("DIFF_PARTIAL\n x | 1 +"), "x | 1 +");
 });
 
 test("stripInputHeader returns empty string when only a header is present", () => {
@@ -105,12 +107,77 @@ test("auto mode uses DIFF_U0 when the zero-context diff fits", () => {
   assert.match(input, /^\+changed 100$/m);
 });
 
-test("auto mode falls back to DIFF_STAT when the diff is too large", () => {
+test("auto mode sends a DIFF_PARTIAL with the stat and a truncated diff when the diff is too large", () => {
   stageBigChange();
-  const input = prepare({ mode: "auto", maxChars: 500 });
+  const input = prepare({ mode: "auto", maxChars: 900 });
+  assert.match(input, /^DIFF_PARTIAL\n/);
+  assert.match(input, /file\.txt +\|/);
+  assert.match(input, /^diff --git a\/file\.txt/m);
+  assert.match(input, /\[truncated\]\n$/);
+  assert.ok(input.length <= 900);
+});
+
+test("a huge file does not hide the small ones", () => {
+  stageBigChange();
+  repo.write("small.txt", "tiny change\n");
+  repo.git("add", "small.txt");
+  const input = prepare({ mode: "auto", maxChars: 1500 });
+  assert.match(input, /^DIFF_PARTIAL\n/);
+  assert.match(input, /^diff --git a\/small\.txt/m);
+  assert.match(input, /^\+tiny change$/m);
+  assert.equal(input.match(/\[truncated\]/g).length, 1);
+  assert.ok(input.length <= 1500);
+});
+
+test("truncation ends at a hunk boundary when a whole hunk fits", () => {
+  const lines = numberedLines(200).split("\n");
+  for (let n = 5; n < 200; n += 10) lines[n] = `CHANGED ${n}`;
+  repo.write("file.txt", lines.join("\n"));
+  repo.git("add", "file.txt");
+  const input = prepare({ mode: "auto", maxChars: 700 });
+  const hunks = input.match(/^@@ /gm).length;
+  assert.ok(hunks >= 1 && hunks < 20, `expected a partial set of hunks, got ${hunks}`);
+  assert.match(input, /\+CHANGED \d+\n\[truncated\]\n$/);
+});
+
+test("truncation falls back to a line boundary inside a single large hunk", () => {
+  stageBigChange();
+  const input = prepare({ mode: "auto", maxChars: 900 });
+  assert.equal(input.match(/^@@ /gm).length, 1);
+  assert.match(input, /\n[-+]LINE?[^\n]*\n\[truncated\]\n$/i);
+});
+
+test("the hybrid input stays under 12000 chars and 3000 chars per file", () => {
+  for (const name of Array.from({ length: 12 }, (_, i) => `f${i}.txt`)) {
+    repo.write(name, numberedLines(400));
+  }
+  repo.commitAll("add files");
+  for (const name of Array.from({ length: 12 }, (_, i) => `f${i}.txt`)) {
+    repo.write(name, numberedLines(400).replace(/line/g, "LINE"));
+  }
+  repo.git("add", "-A");
+  const input = prepare({ mode: "auto", maxChars: 48000 });
+  assert.match(input, /^DIFF_PARTIAL\n/);
+  assert.ok(input.length <= 12000, `hybrid input is ${input.length} chars`);
+  for (const file of input.split(/^(?=diff --git )/m).slice(1)) {
+    assert.ok(file.length <= 3000, `a file contributed ${file.length} chars`);
+  }
+});
+
+test("the default size cap keeps a 20000 char diff within 16000 chars", () => {
+  repo.write("file.txt", numberedLines(1500).replace(/line/g, "LINE"));
+  repo.git("add", "file.txt");
+  const input = prepare({ mode: "auto", maxChars: DEFAULT_MAX_INPUT_CHARS });
+  assert.equal(DEFAULT_MAX_INPUT_CHARS, 16000);
+  assert.ok(input.length <= 16000);
+});
+
+test("auto mode uses the stat alone when it leaves no room for diff content", () => {
+  stageBigChange();
+  const input = prepare({ mode: "auto", maxChars: 150 });
   assert.match(input, /^DIFF_STAT\n/);
   assert.match(input, /file\.txt/);
-  assert.ok(input.length <= 500);
+  assert.ok(input.length <= 150);
 });
 
 test("auto mode truncates the stat fallback to maxChars", () => {

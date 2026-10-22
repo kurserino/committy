@@ -20,9 +20,9 @@ function readDefaultModel(env) {
   return result.stdout.trim();
 }
 
-test("DEFAULT_MODEL is gpt-5 and ignores COMMITTY_MODEL", () => {
+test("DEFAULT_MODEL is gpt-5-mini and ignores COMMITTY_MODEL", () => {
   // COMMITTY_MODEL is its own settings layer, resolved at run time
-  assert.equal(readDefaultModel({ ...process.env, COMMITTY_MODEL: "gpt-4o" }), "gpt-5");
+  assert.equal(readDefaultModel({ ...process.env, COMMITTY_MODEL: "gpt-4o" }), "gpt-5-mini");
 });
 
 test("default excludes cover lockfiles, build output, maps and env files", async () => {
@@ -42,7 +42,7 @@ test("default excludes cover lockfiles, build output, maps and env files", async
     "*.snap",
     ".env*",
   ]);
-  assert.equal(DEFAULT_MAX_INPUT_CHARS, 48000);
+  assert.equal(DEFAULT_MAX_INPUT_CHARS, 16000);
 });
 
 test("default exclude pathspecs match the defaults at any depth", async () => {
