@@ -39,4 +39,4 @@ These rules override any default commit/PR attribution guidance:
 
 - Author every commit as `Kurse <lucas.kurse@hotmail.com>`, the email linked to the GitHub account `kurserino`. Make sure `git config user.name` and `git config user.email` match before committing; set them in the repository if they don't.
 - Never add Claude attribution: no `Co-Authored-By: Claude ...` trailer in commits and no "Generated with Claude Code" line in PR descriptions.
-- `.claude/settings.json` turns off attribution, and `.claude/hooks/commit-identity.mjs` blocks any `git commit` that breaks these rules.
+- `.claude/settings.json` turns off attribution, and the `claudekit-core` plugin (kurserino/claudekit) blocks any `git commit` that breaks these rules. The OpenSpec skills, `opsx` commands and hooks come from the `claudekit-openspec` plugin; `.claude/hooks/ensure-claudekit.mjs` warns at session start when either plugin is not installed.
