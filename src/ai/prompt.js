@@ -1,7 +1,7 @@
 import { DEFAULT_STYLE, STYLES } from "./style.js";
 
 const INPUT_FORMATS =
-  "Input may be a DIFF, a minimal diff (U0), a STAT summary or just FILENAMES.";
+  "Input may be a DIFF, a minimal diff (U0), a STAT summary or just FILENAMES; PARTIAL is a STAT plus a diff cut where marked [truncated].";
 
 // Prompt template - keep it compact on purpose
 export function buildPrompt(inputText, { style = DEFAULT_STYLE, oneLine = true } = {}) {

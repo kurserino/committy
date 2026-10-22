@@ -31,6 +31,38 @@ test("sends the prompt with the chosen model and returns the trimmed message", a
   ]);
 });
 
+for (const model of ["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-5-2025-08-07"]) {
+  test(`${model} gets minimal reasoning, low verbosity and an output cap`, async (t) => {
+    t.mock.method(console, "log", () => {});
+    const client = fakeClient("fix: x");
+    await generateCommitMessage({ inputText: "x", model, client });
+    const [request] = client.calls;
+    assert.equal(request.reasoning_effort, "minimal");
+    assert.equal(request.verbosity, "low");
+    assert.equal(typeof request.max_completion_tokens, "number");
+  });
+}
+
+for (const model of ["gpt-4o", "gpt-5-chat-latest", "gpt-5.1", "o3"]) {
+  test(`${model} gets no reasoning, verbosity or output cap parameters`, async (t) => {
+    t.mock.method(console, "log", () => {});
+    const client = fakeClient("fix: x");
+    await generateCommitMessage({ inputText: "x", model, client });
+    for (const key of ["reasoning_effort", "verbosity", "max_completion_tokens"]) {
+      assert.ok(!(key in client.calls[0]), `${key} should not be sent`);
+    }
+  });
+}
+
+test("the multi-line output cap is larger than the one-line cap", async (t) => {
+  t.mock.method(console, "log", () => {});
+  const client = fakeClient("fix: x");
+  await generateCommitMessage({ inputText: "x", model: "gpt-5", client });
+  await generateCommitMessage({ inputText: "x", model: "gpt-5", oneLine: false, client });
+  const [oneLine, multiLine] = client.calls.map((call) => call.max_completion_tokens);
+  assert.ok(multiLine > oneLine);
+});
+
 test("asks for the given style and line mode and keeps the body", async (t) => {
   t.mock.method(console, "log", () => {});
   const client = fakeClient("feat: add login\n\n- Add the form\n");
