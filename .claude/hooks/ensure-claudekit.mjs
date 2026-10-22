@@ -1,18 +1,27 @@
-// SessionStart: tell Claude when a claudekit plugin declared in this project is not installed
+// SessionStart: tell Claude when a claudekit plugin is not installed for this project
 import { existsSync, readFileSync } from "fs";
 import os from "os";
 import path from "path";
 
 const WANTED = ["claudekit-core@claudekit", "claudekit-openspec@claudekit"];
+const here = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), ".claude");
+
 let installed = {};
 try {
-  const file = path.join(os.homedir(), ".claude", "plugins", "installed_plugins.json");
+  const file = path.join(configDir, "plugins", "installed_plugins.json");
   if (existsSync(file)) installed = JSON.parse(readFileSync(file, "utf-8")).plugins ?? {};
 } catch {
   // unreadable file counts as nothing installed
 }
 
-const missing = WANTED.filter((id) => !installed[id]);
+// A project-scope install only counts for the project it was made in (path.relative ignores case and slashes on Windows)
+const active = (id) =>
+  (installed[id] ?? []).some(
+    (i) => i.scope === "user" || (i.projectPath && path.relative(i.projectPath, here) === "")
+  );
+
+const missing = WANTED.filter((id) => !active(id));
 if (missing.length > 0) {
   const cmds = ["claude plugin marketplace add kurserino/claudekit --scope project", ...missing.map((id) => `claude plugin install ${id} --scope project`)];
   process.stdout.write(
