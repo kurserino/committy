@@ -36,8 +36,5 @@
         "repo": "kurserino/claudekit"
       }
     }
-  },
-  "env": {
-    "PONYTAIL_DEFAULT_MODE": "full"
   }
 }
