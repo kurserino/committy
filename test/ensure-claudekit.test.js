@@ -31,7 +31,7 @@ test("warns when the plugin file does not exist", () => {
 test("warns about claudekit-diff only when it is the one plugin missing", () => {
   const project = createTempDir();
   const warning = runHook({ project, install: { scope: "project", projectPath: project }, ids: IDS.filter((id) => id !== "claudekit-diff@claudekit") });
-  assert.match(warning, /Missing project plugins: claudekit-diff@claudekit\. NOT active: \/diff panel at session start\./);
+  assert.match(warning, /Missing project plugins: claudekit-diff@claudekit\. NOT active: \/diff panel\./);
   assert.match(warning, /claude plugin install claudekit-diff@claudekit --scope project/);
   assert.doesNotMatch(warning, /commit-identity|OpenSpec|install claudekit-(core|openspec)/);
 });

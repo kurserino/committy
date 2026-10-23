@@ -7,7 +7,7 @@ import path from "path";
 const PLUGINS = {
   "claudekit-core@claudekit": { repo: "kurserino/claudekit", role: "commit-identity guard" },
   "claudekit-openspec@claudekit": { repo: "kurserino/claudekit", role: "OpenSpec skills and guards" },
-  "claudekit-diff@claudekit": { repo: "kurserino/claudekit", role: "/diff panel at session start" },
+  "claudekit-diff@claudekit": { repo: "kurserino/claudekit", role: "/diff panel" },
   "ponytail@ponytail": { repo: "DietrichGebert/ponytail", role: "ponytail lazy-solution mode" },
 };
 const here = process.env.CLAUDE_PROJECT_DIR || process.cwd();
