@@ -3,7 +3,9 @@ import { existsSync, readFileSync } from "fs";
 import os from "os";
 import path from "path";
 
-// Each plugin's marketplace repo and what stops working without it, for the warning
+// Each plugin's marketplace repo and what stops working without it, for the warning.
+// Add the other plugins the project relies on, e.g.
+// "claudekit-diff@claudekit": { repo: "kurserino/claudekit", role: "/diff panel at session start" },
 const PLUGINS = {
   "claudekit-core@claudekit": { repo: "kurserino/claudekit", role: "commit-identity guard" },
   "claudekit-openspec@claudekit": { repo: "kurserino/claudekit", role: "OpenSpec skills and guards" },
