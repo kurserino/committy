@@ -12,6 +12,7 @@ const PLUGINS = {
   "claudekit-openspec@claudekit": { repo: "kurserino/claudekit", role: "OpenSpec skills and guards" },
   "claudekit-diff@claudekit": { repo: "kurserino/claudekit", role: "/diff panel" },
   "ponytail@ponytail": { repo: "DietrichGebert/ponytail", role: "ponytail lazy-solution mode" },
+  "caveman@caveman": { repo: "JuliusBrussee/caveman", role: "caveman terse-reply mode" },
 };
 // The status line the project installs for users without one (null: none), and its layout
 const STATUS_LINE = {"type":"command","command":"npx -y ccstatusline@2.2.30","padding":0,"refreshInterval":10};
