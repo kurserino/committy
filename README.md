@@ -218,6 +218,13 @@ openspec/            # Specs and change proposals (OpenSpec)
 
 ## 📌 Roadmap
 
+- [ ] Support more AI providers besides OpenAI: Anthropic (Claude) and Google (Gemini)
+- [ ] Interactive confirmation before committing: accept, edit in `$EDITOR` or regenerate
+- [ ] OpenAI-compatible base URL setting (Ollama, LM Studio, OpenRouter, Azure)
+- [ ] Redact secrets (keys, tokens, `.env` values) from the diff before sending it
+- [ ] Extra context for the model: a `--context` flag and the ticket ID from the branch name
+- [ ] Message language option (e.g. `--lang pt-BR`)
+- [ ] `--amend` to regenerate the last commit's message
 - [ ] Support for `git commit -a`
 - [ ] Support custom prompt templates
 - [ ] Git hook integration
