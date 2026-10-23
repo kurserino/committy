@@ -36,5 +36,10 @@
         "repo": "kurserino/claudekit"
       }
     }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(gh pr merge:*)"
+    ]
   }
 }
